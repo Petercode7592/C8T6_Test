@@ -142,7 +142,6 @@ char* MDrv_ReadFlash(char* charArray)
   // return charArray;
 }
 
-
 char* MDrv_ReadVol(char* charArray)
 {
   // 发送指令
@@ -178,6 +177,7 @@ HAL_StatusTypeDef MDrv_Reset()
 
 /** @brief 配置电机类型
   * @param mtype 电机类型，1: 520电机 2：310电机 3: TT电机(带有编码器的) 4: TT电机(不带编码器)
+  * @note 固件默认值为1 (520电机)
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype)
@@ -189,7 +189,8 @@ HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype)
 
 /**
   * @brief 配置电机的相位线
-  * @param mline mline值，是电机的减速比参数，此值需要查商家电机的参数表可得
+  * @param mline 是霍尔编码器转一圈的相位，此值需要查商家电机的参数表可得
+  * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.配置电机霍尔编码器的相位为13线
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef Mdrv_SetMline(uint32_t mline)
@@ -200,8 +201,22 @@ HAL_StatusTypeDef Mdrv_SetMline(uint32_t mline)
 }
 
 /**
+  * @brief 配置电机的减速比
+  * @param mphase 减速比，固件默认。此值需要查商家电机的参数表可得
+  * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.固件默认值30
+  * @retval HAL_StatusTypeDef 返回状态
+  */
+HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase)
+{
+  char cmd[25];
+  snprintf(cmd, sizeof(cmd), "$mphase:%d#", mphase);  // 发送指令
+  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+}
+
+/**
   * @brief 配置电机的pwm脉冲死区
   * @param deadzone 死区值，范围0-3600。这个需要测量得出,可通过改变此值，消除电机最小震荡。死区值的范围(0-3600)
+  * @note 固件默认值1600.这样控制pwm时会默认加上死区的值，使得电机不会出现震荡区域
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone)
@@ -216,8 +231,9 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone)
 }
 
 /**
-  * @brief 配置车轮直径
+  * @brief (可选)配置车轮直径
   * @param wdiameter 车轮直径，单位为毫米
+  * @note 带编码器电机来说：此值对于控制速度起主要作用，此值单位为毫米（mm）；如果此值不正确，只会影响速度数据不准确，不会影响编码器的数据
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter)
@@ -259,6 +275,18 @@ HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int3
 }
 
 /**
+  * @brief 设置电机的PWM值
+  * @param pwm 电机的PWM值数组，长度为4，范围为-3600到3600
+  * @note 此函数会设置所有电机的PWM值，pwm[0]对应电机1，pwm[1]对应电机2，pwm[2]对应电机3，pwm[3]对应电机4
+  */
+HAL_StatusTypeDef MDrv_SetPWM(int16_t* pwm) {
+  // 设置电机的PWM值 -3600 到 3600 之间
+  char cmd[50];
+  snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
+  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+}
+
+/**
   * @brief 设置电机速度
   * @param mode 1: 正向速度, -1: 反向速度, 0: 停止
   * @param Vm 电机速度 (-1000到1000之间)
@@ -273,6 +301,7 @@ void MDrv_GoSpeed(uint8_t mode, int32_t Vm) {
     MDrv_SetSpeed(0, 0, 0, 0); // 停止所有电机
 }
 
+
 /**
   * @brief (bug)初始化驱动板
   * @retval HAL_StatusTypeDef 返回状态
@@ -282,24 +311,92 @@ void MDrv_GoSpeed(uint8_t mode, int32_t Vm) {
   */
 void MDrv_Init() {
   // MDrv_SetPID(0.8, 0.06, 0.5);
+  MDrv_SetSpeed(0,0,0,0);   // 设置电机速度
+  HAL_Delay(90);
   MDrv_SetMtype(2);         // 设置为310电机
-  HAL_Delay(100);
+  HAL_Delay(90);
   Mdrv_SetMline(13);        // 设置电机的相位线
-  HAL_Delay(100);
+  HAL_Delay(90);
+  Mdrv_SetMphase(20);       // 设置电机的减速比
+  HAL_Delay(90);
   MDrv_SetWdiameter(48);    // 设置车轮直径
-  HAL_Delay(100);
+  HAL_Delay(90);
   MDrv_SetDeadzone(1650);   // 设置电机的pwm脉冲死区,需要测量得出
-  HAL_Delay(100);
-  MDrv_SetSpeed(0,0,0,0); // 设置电机速度
-  HAL_Delay(100);
+  HAL_Delay(90);
 }
 /* USER CODE END 0 */
+
+/*
+ * 该部分的函数主要是为了处理四路驱动板上接收到的数据】
+ * 以下将给出部分数据
+ * $MTEP:63,64,66,66#
+ * $MSPD:608.99,618.65,637.98,637.98#
+ * $MAll:23427,23801,24543,24453#
+ * $MTEP:63,64,66,65#
+ * $MAll:23490,23865,24609,24518#
+ * $MTEP:63,64,66,66#
+ * $MAll:23553,23929,24675,24584#
+ * $MTEP:63,64,66,66#
+ * $MAll:23616,23993,24741,24650#
+ * $MTEP:63,64,66,66#
+ * $MAll:23679,24057,24807,24715#
+ * $MTEP:63,64,66,65#
+ * $MSPD:608.99,618.65,637.98,637.98#
+  */
+
+
+void MDrv_ProcessMALL(char *mall) {
+  // 处理 $MALL 数据 代表轮子转动的总编码器数据
+  // 例如解析数据并存储到相应的变量中
+  // 假设数据格式为 "$MAll:23427,23801,24543,24453#"
+
+}
+
+void MDrv_ProcessMTEP(char *mtep) {
+  // 处理 $MTEP 数据 代表轮子转动的实时转动编码器数据 10ms
+  // 例如解析数据并存储到相应的变量中
+  // 假设数据格式为 "$MTEP:63,64,66,66#"·
+}
+
+void MDrv_ProcessMSPD(char *mspd) {
+  // 处理 $MSPD 数据 代表轮子转动的实时速度数据
+  // 例如解析数据并存储到相应的变量中
+  // 假设数据格式为 "$MSPD:608.99,618.65,637.98,637.98#"
+}
+
+
+void MDrv_JudgeDataType(char *Udata) {
+  if (strncmp(Udata, "$MALL", 5) == 0) {
+    MDrv_ProcessMALL(Udata + 6);
+  }
+  else if (strncmp(Udata, "$MTEP", 5) == 0) {
+    MDrv_ProcessMTEP(Udata + 6);
+  }
+  else if (strncmp(Udata, "$MSPD", 5) == 0) {
+    MDrv_ProcessMSPD(Udata + 6);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
   * @brief  The application entry point.
   * @retval int
   */
- int main(void)
+int main(void)
 {
 
   /* USER CODE BEGIN 1 */
@@ -356,10 +453,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -369,12 +469,12 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
