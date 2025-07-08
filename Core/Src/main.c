@@ -264,8 +264,8 @@ HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d)
   return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
 }
 
-/** * @brief 设置各个电机速度
-  * @param Vm1 电机1速度 (-1000到1000之间)
+/** * @brief 设置各个电机速度(单位mm/s)
+  * @param Vm1 电机1速度
   * @param Vm2 电机2速度 (-1000到1000之间)
   * @param Vm3 电机3速度 (-1000到1000之间)
   * @param Vm4 电机4速度 (-1000到1000之间)
@@ -294,18 +294,20 @@ HAL_StatusTypeDef MDrv_SetPWM(int16_t* pwm) {
 }
 
 /**
-  * @brief 设置电机速度
+  * @brief 设置电机速度(单位mm/s)
   * @param mode 1: 正向速度, -1: 反向速度, 0: 停止
-  * @param Vm 电机速度 (-1000到1000之间)
+  * @param Vm 电机速度(单位mm/s),内部判断需为正。
   * @note 此函数会设置所有电机的速度，Vm为正时表示正向转动，负时表示反向转动，0时表示停止
   */
-void MDrv_GoSpeed(uint8_t mode, int32_t Vm) {
-  if (mode == 1)
-    MDrv_SetSpeed(Vm, Vm, Vm, Vm); // 设置所有电机速度
-  else if (mode == -1)
-    MDrv_SetSpeed(-Vm, -Vm, -Vm, -Vm); // 转置所有电机速度
-  else if (mode == 0)
-    MDrv_SetSpeed(0, 0, 0, 0); // 停止所有电机
+void MDrv_GoSpeed(int8_t mode, int32_t Vm) {
+  if (Vm > 0) {
+    if (mode == 1)
+      MDrv_SetSpeed(Vm, Vm, Vm, Vm); // 设置所有电机速度
+    else if (mode == -1)
+      MDrv_SetSpeed(-1 * Vm, -1 * Vm, -1 * Vm, -1 * Vm); // 转置所有电机速度
+    else if (mode == 0)
+      MDrv_SetSpeed(0, 0, 0, 0); // 停止所有电机
+  }
 }
 
 
@@ -441,7 +443,10 @@ int main(void)
   HAL_Delay(2000);
   MDrv_GoSpeed(-1,200);
   while (1) {
-
+    MDrv_GoSpeed(1, 100);
+    HAL_Delay(2000);
+    MDrv_GoSpeed(-1,100);
+    HAL_Delay(2000);
   }
 
     /* USER CODE END WHILE */
