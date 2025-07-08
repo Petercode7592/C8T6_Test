@@ -47,7 +47,14 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+float V[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+char DataRecBuffer[50];
+uint8_t idx;
+int32_t MAX_SPEED;
 
+float mall[4];
+int mtep[4];
+float mspd[4];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -243,17 +250,17 @@ HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter)
   return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
 }
 
-/** @brief 设置PID参数, 设置后芯片会重启，会把正在运动的电机停止
+/** @brief (bug)设置PID参数, 设置后芯片会重启，会把正在运动的电机停止
   * @param p 比例系数
   * @param i 积分系数
   * @param d 微分系数
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_SetPID(double p, double i, double d)
+HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d)
 {
   // 发送指令
   char cmd[50];
-  snprintf(cmd, sizeof(cmd), "$MPID:%ld,%ld,%ld#", p, i, d);
+  snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#", p, i, d);
   return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -271,16 +278,16 @@ HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int3
     return HAL_ERROR;  // 错误处理，速度值超出范围
   }
   snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
+
   return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
   * @brief 设置电机的PWM值
-  * @param pwm 电机的PWM值数组，长度为4，范围为-3600到3600
+  * @param pwm 电机的PWM值数组，长度为4，范围为-3600到3600. 为负时表示反向转动，正时表示正向转动
   * @note 此函数会设置所有电机的PWM值，pwm[0]对应电机1，pwm[1]对应电机2，pwm[2]对应电机3，pwm[3]对应电机4
   */
 HAL_StatusTypeDef MDrv_SetPWM(int16_t* pwm) {
-  // 设置电机的PWM值 -3600 到 3600 之间
   char cmd[50];
   snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
   return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
@@ -305,7 +312,7 @@ void MDrv_GoSpeed(uint8_t mode, int32_t Vm) {
 /**
   * @brief (bug)初始化驱动板
   * @retval HAL_StatusTypeDef 返回状态
-  * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时15ms,收到HAL_OK只代表发出去不代表已经MD收到
+  * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时90ms,收到HAL_OK只代表发出去不代表已经MD收到
   * @bug 1. 设置电机速度无论延迟多少都无法正确设置，可能要收到单片机回传的正确时间
   * @bug 2. 死区值需要测量得出，不能随意设置
   */
@@ -324,44 +331,44 @@ void MDrv_Init() {
   MDrv_SetDeadzone(1650);   // 设置电机的pwm脉冲死区,需要测量得出
   HAL_Delay(90);
 }
-/* USER CODE END 0 */
 
-/*
- * 该部分的函数主要是为了处理四路驱动板上接收到的数据】
- * 以下将给出部分数据
- * $MTEP:63,64,66,66#
- * $MSPD:608.99,618.65,637.98,637.98#
- * $MAll:23427,23801,24543,24453#
- * $MTEP:63,64,66,65#
- * $MAll:23490,23865,24609,24518#
- * $MTEP:63,64,66,66#
- * $MAll:23553,23929,24675,24584#
- * $MTEP:63,64,66,66#
- * $MAll:23616,23993,24741,24650#
- * $MTEP:63,64,66,66#
- * $MAll:23679,24057,24807,24715#
- * $MTEP:63,64,66,65#
- * $MSPD:608.99,618.65,637.98,637.98#
-  */
-
-
-void MDrv_ProcessMALL(char *mall) {
+void MDrv_ProcessMALL(char *data) {
   // 处理 $MALL 数据 代表轮子转动的总编码器数据
   // 例如解析数据并存储到相应的变量中
   // 假设数据格式为 "$MAll:23427,23801,24543,24453#"
-
+  sscanf(data, "$MAll:%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
 }
 
-void MDrv_ProcessMTEP(char *mtep) {
+void MDrv_ProcessMTEP(char *data) {
   // 处理 $MTEP 数据 代表轮子转动的实时转动编码器数据 10ms
   // 例如解析数据并存储到相应的变量中
   // 假设数据格式为 "$MTEP:63,64,66,66#"·
+  sscanf(data, "$MTEP:%d,%d,%d,%d", &mtep[0], &mtep[1], &mtep[2], &mtep[3]);
 }
 
-void MDrv_ProcessMSPD(char *mspd) {
+void MDrv_ProcessMSPD(char *data) {
   // 处理 $MSPD 数据 代表轮子转动的实时速度数据
   // 例如解析数据并存储到相应的变量中
   // 假设数据格式为 "$MSPD:608.99,618.65,637.98,637.98#"
+  // sscanf(data, "$MSPD:%f,%f,%f,%f", &mspd[0], &mspd[1], &mspd[2], &mspd[3]);
+  // if (mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) {
+  //   MDrv_SetPWM((mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) ? : ); // 设置电机1的PWM值
+  // }
+  //
+  //  MDrv_SetPWM(mtep) : (void)0;
+  // if (mspd[1] - V[1] > 0.1f || mspd[1] - V[1] < -0.1f) {
+  //
+  // }
+  // if (mspd[2] - V[2] > 0.1f || mspd[2] - V[2] < -0.1f) {
+  //
+  // }
+  // if (mspd[3] - V[3] > 0.1f || mspd[3] - V[3] < -0.1f) {
+  //
+  // }
+  //
+  //   // 如果速度变化超过阈值，更新V数组
+  //   memcpy(V, mspd, sizeof(V));
+
 }
 
 
@@ -377,20 +384,20 @@ void MDrv_JudgeDataType(char *Udata) {
   }
 }
 
+void HAL_UART_RXCpltCallBack(UART_HandleTypeDef *huart) {
+  if (huart == &UMUART_Cfg) {
+    HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *)DataRecBuffer, 1);
+    if (DataRecBuffer[idx] == '#') {
+      DataRecBuffer[idx] = '\0';  // 结束字符串
+      MDrv_JudgeDataType(DataRecBuffer);
+      idx = 0;
+    }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+  }
+}
+ 
+/* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
@@ -424,15 +431,18 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  MDrv_Init();
+  HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t*) DataRecBuffer, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  MDrv_Init();
+  MDrv_GoSpeed(1, 200);
+  HAL_Delay(2000);
+  MDrv_GoSpeed(-1,200);
   while (1) {
 
-    }
+  }
 
     /* USER CODE END WHILE */
 
