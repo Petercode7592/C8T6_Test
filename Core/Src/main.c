@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -49,8 +50,9 @@
 float V[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 int32_t MAX_SPEED;
 
+uint8_t Buffsize = 200;
 uint8_t RxBuff[1]; //进入中断接收数据的数组
-uint8_t DataBuff[500]; //保存接收到的数据的数组
+uint8_t DataBuff[200]; //保存接收到的数据的数组
 int RxLine = 0; //接收到的数据长度
 
 float mall[4];
@@ -138,9 +140,6 @@ char *MDrv_ReadFlash(char *charArray) {
 }
 
 
-
-
-
 void MDrv_ProcessMALL(char *data) {
     // 处理 $MALL 数据 代表轮子转动的总编码器数据
     // 例如解析数据并存储到相应的变量中
@@ -192,73 +191,15 @@ void MDrv_JudgeDataType(char *Udata) {
     }
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance == huart2.Instance) {
-        uint8_t received_char = RxBuff[0];
 
-        // 检查是否是帧尾字符
-        if (received_char == '#') {
-            // 确保我们之前已经收到了一些数据
-            if (RxLine > 0) {
-                DataBuff[RxLine] = '\0'; // 添加字符串结束符
-                MDrv_JudgeDataType((char *)DataBuff); // 处理完整的数据
-            }
-            // 不论之前有无数据，收到帧尾都意味着一帧的结束，重置计数器
-            RxLine = 0;
-        }
-        // 如果不是帧尾，则为数据字节
-        else {
-            // 忽略回车和换行符，它们通常没有用
-            if (received_char != '\r' && received_char != '\n') {
-                // 检查缓冲区是否会溢出
-                if (RxLine < (500 - 1)) { // 留一个位置给 '\0'
-                    DataBuff[RxLine++] = received_char;
-                } else {
-                    // 缓冲区溢出，这是一个严重错误。丢弃当前所有数据并重置。
-                    // 最好在这里加一个错误处理，比如点亮一个LED。
-                    RxLine = 0;
-                }
-            }
-        }
-
-        // 每次处理完一个字节后，必须重新使能中断以接收下一个字节！
-        // 这是保证连续接收的关键。
-        HAL_UART_Receive_IT(&huart2, (uint8_t *)RxBuff, 1);
-    }
+// 空闲中断+DMA
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+  // 这个回调函数会在接收到数据时被调用
+  if (huart->Instance == UMUART_Cfg.Instance) {
+    MDrv_JudgeDataType(DataBuff); // 处理接收到的数据
+    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, Buffsize); // 继续接收下一个字节
+  }
 }
-
-// void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle) {
-//     if (UartHandle == &UMUART_Cfg) {
-//         RxLine++; //每接收到一个数据，进入回调数据长度加1
-//         DataBuff[RxLine - 1] = RxBuff[0]; //把每次接收到的数据保存到缓存数组
-//         if (RxBuff[0] == 0x24) //接收开始标志位 $
-//         {
-//             // RxLine = 1; // 重置接收长度
-//             HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1); // 继续接收下一个字节
-//             return;
-//             // memset(DataBuff, 0, sizeof(DataBuff)); //清空缓存数组
-//         }else if (RxBuff[0] == 0x23) // 接收结束标志位 #
-//         {
-//             DataBuff[RxLine] = '\0'; // 添加字符串结束符
-//             MDrv_JudgeDataType((char *) DataBuff); // 处理接收到的数据
-//             // memset(DataBuff, 0, sizeof(DataBuff)); // 清空缓存数组
-//             RxLine = 0; // 清空接收长度
-//         }else if (RxBuff[0] == 0x0A || RxBuff[0] == 0x0D) {
-//             // 换行符或回车符，忽略
-//             DataBuff[RxLine - 1] = '\0'; // 覆盖换行符
-//             RxLine = 0; // 重置接收长度
-//             MDrv_JudgeDataType(DataBuff); // 处理接收到的数据
-//             HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1); // 继续接收下一个字节
-//             return;
-//         }
-//         // other case
-//         // 继续接收下一个字节
-//         RxBuff[0] = 0;
-//         HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1);
-//         //每接收一个数据，就打开一次串口中断接收，否则只会接收一个数据就停止接收
-//     }
-// }
-//
 
 /* USER CODE END 0 */
 
@@ -291,12 +232,13 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
     MDrv_Init();
     HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$upload:0,0,1#", 14, Uart_MaxWait); // 开启上传数据
-    HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1); //打开串口中断接收
+    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, Buffsize); // 启动DMA接收，接收单个字节
   /* USER CODE END 2 */
 
   /* Infinite loop */
