@@ -22,7 +22,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <sys/types.h>
 
 #include "string.h"
 /* USER CODE END Includes */
@@ -45,12 +44,16 @@
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_usart2_rx;
+DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 float V[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-char DataRecBuffer[50];
-uint8_t idx;
 int32_t MAX_SPEED;
+
+uint8_t RxBuff[1]; //进入中断接收数据的数组
+uint8_t DataBuff[500]; //保存接收到的数据的数组
+int RxLine = 0; //接收到的数据长度
 
 float mall[4];
 int mtep[4];
@@ -60,6 +63,7 @@ float mspd[4];
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
@@ -79,10 +83,9 @@ static void MX_USART2_UART_Init(void);
   * @param pData 数据指针
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef UART_TransmitOnebit(const uint8_t mode, uint8_t *pData)
-{
-  // 1 代表 to PC 2代表 to 驱动板
-  return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
+HAL_StatusTypeDef UART_TransmitOnebit(const uint8_t mode, uint8_t *pData) {
+    // 1 代表 to PC 2代表 to 驱动板
+    return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
 }
 
 /** @brief  MCU 发送数据
@@ -91,10 +94,9 @@ HAL_StatusTypeDef UART_TransmitOnebit(const uint8_t mode, uint8_t *pData)
   * @param size 数据长度
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef UART_Transmit(const uint8_t mode, const uint8_t *pData,uint16_t size)
-{
-  // 1 代表 to PC 2代表 to 驱动板
-  return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, size, Uart_MaxWait);
+HAL_StatusTypeDef UART_Transmit(const uint8_t mode, const uint8_t *pData, uint16_t size) {
+    // 1 代表 to PC 2代表 to 驱动板
+    return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, size, Uart_MaxWait);
 }
 
 /**
@@ -103,9 +105,8 @@ HAL_StatusTypeDef UART_Transmit(const uint8_t mode, const uint8_t *pData,uint16_
   * @param String 字符串指针
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef UART_TransmitString(const uint8_t mode, const char *String)
-{
-  return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, (uint8_t*) String, strlen(String), Uart_MaxWait);
+HAL_StatusTypeDef UART_TransmitString(const uint8_t mode, const char *String) {
+    return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, (uint8_t *) String, strlen(String), Uart_MaxWait);
 }
 
 /**
@@ -114,72 +115,48 @@ HAL_StatusTypeDef UART_TransmitString(const uint8_t mode, const char *String)
   * @param pData 数据指针
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef UART_ReceiveOnebit(const uint8_t mode, uint8_t *pData)
-{
-  // 1 代表 to PC 2代表 to 驱动板
-  return HAL_UART_Receive((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
+HAL_StatusTypeDef UART_ReceiveOnebit(const uint8_t mode, uint8_t *pData) {
+    // 1 代表 to PC 2代表 to 驱动板
+    return HAL_UART_Receive((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
 }
 
 
 // 可以使用DMA完成
-char* MDrv_ReadFlash(char* charArray)
-{
-
-  // // 发送指令
-  // HAL_StatusTypeDef status = HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$read_flash#", 12, Uart_MaxWait);
-  // if (status != HAL_OK)
-  //   return NULL;
-  //
-  // uint32_t index = 0;
-  // char ch = 0;
-  //
-  // while (index < 63)  // 预留1字节给 '\0'
-  // {
-  //   status = UART_ReceiveOnebit(1, (uint8_t*)&ch);
-  //   if (status != HAL_OK)
-  //     return NULL;  // 接收失败或超时，返回NULL
-  //
-  //   charArray[index++] = ch;
-  //
-  //   if (ch == '#')  // 遇到结束符，结束接收
-  //     break;
-  // }
-  //
-  // charArray[index] = '\0';  // 字符串结束符
-  // return charArray;
+char *MDrv_ReadFlash(char *charArray) {
+    // // 发送指令
+    // HAL_StatusTypeDef status = HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$read_flash#", 12, Uart_MaxWait);
+    // if (status != HAL_OK)
+    //   return NULL;
+    //
+    // uint32_t index = 0;
+    // char ch = 0;
+    //
+    // while (index < 63)  // 预留1字节给 '\0'
+    // {
+    //   status = UART_ReceiveOnebit(1, (uint8_t*)&ch);
+    //   if (status != HAL_OK)
+    //     return NULL;  // 接收失败或超时，返回NULL
+    //
+    //   charArray[index++] = ch;
+    //
+    //   if (ch == '#')  // 遇到结束符，结束接收
+    //     break;
+    // }
+    //
+    // charArray[index] = '\0';  // 字符串结束符
+    // return charArray;
 }
 
-char* MDrv_ReadVol(char* charArray)
-{
-  // 发送指令
-  HAL_StatusTypeDef status = HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$read_vol#", 10, Uart_MaxWait);
-  if (status != HAL_OK)
-    return NULL;
-
-  uint32_t index = 0;
-  char ch = 0;
-
-  while (index < 63)  // 预留1字节给 '\0'
-  {
-    status = UART_ReceiveOnebit(1, (uint8_t*) &ch);
-    if (status != HAL_OK)
-      return NULL;    // 接收失败或超时，返回NULL或已收到内容
-    charArray[index++] = ch;
-
-    if (ch == '#')  // 遇到结束符，结束接收
-      break;
-  }
-
-  charArray[index] = '\0';  // 字符串结束符
-  return charArray;
+void MDrv_ReadVol(char *charArray) {
+    // 接收放在中断内
+    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$read_vol#", 10, Uart_MaxWait);
 }
 
 /** @brief  (Checked)MCU 驱动板复位
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_Reset()
-{
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$flash_reset#", 13, Uart_MaxWait);
+HAL_StatusTypeDef MDrv_Reset() {
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$flash_reset#", 13, Uart_MaxWait);
 }
 
 /** @brief 配置电机类型
@@ -187,11 +164,10 @@ HAL_StatusTypeDef MDrv_Reset()
   * @note 固件默认值为1 (520电机)
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype)
-{
-  char cmd[25];
-  snprintf(cmd, sizeof(cmd), "$mtype:%d#", mtype);
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype) {
+    char cmd[25];
+    snprintf(cmd, sizeof(cmd), "$mtype:%d#", mtype);
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -200,11 +176,10 @@ HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype)
   * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.配置电机霍尔编码器的相位为13线
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef Mdrv_SetMline(uint32_t mline)
-{
-  char cmd[25];
-  snprintf(cmd, sizeof(cmd), "$mline:%d#", mline);  // 发送指令
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+HAL_StatusTypeDef Mdrv_SetMline(uint8_t mline) {
+    char cmd[25];
+    snprintf(cmd, sizeof(cmd), "$mline:%d#", mline); // 发送指令
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -213,11 +188,10 @@ HAL_StatusTypeDef Mdrv_SetMline(uint32_t mline)
   * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.固件默认值30
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase)
-{
-  char cmd[25];
-  snprintf(cmd, sizeof(cmd), "$mphase:%d#", mphase);  // 发送指令
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase) {
+    char cmd[25];
+    snprintf(cmd, sizeof(cmd), "$mphase:%d#", mphase); // 发送指令
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -226,15 +200,14 @@ HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase)
   * @note 固件默认值1600.这样控制pwm时会默认加上死区的值，使得电机不会出现震荡区域
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone)
-{
-  char cmd[25];
-  if (deadzone >= 0 && deadzone <= 3600) {
-    // 确保死区值在0到3600之间
-    snprintf(cmd, sizeof(cmd), "$deadzone:%d#", deadzone);  // 发送指令
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
-  }
-  return HAL_ERROR;  // 错误处理
+HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone) {
+    char cmd[25];
+    if (deadzone <= 3600) {
+        // 确保死区值在0到3600之间
+        snprintf(cmd, sizeof(cmd), "$deadzone:%ld#", deadzone); // 发送指令
+        return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    }
+    return HAL_ERROR; // 错误处理
 }
 
 /**
@@ -243,11 +216,10 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone)
   * @note 带编码器电机来说：此值对于控制速度起主要作用，此值单位为毫米（mm）；如果此值不正确，只会影响速度数据不准确，不会影响编码器的数据
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter)
-{
-  char cmd[25];
-  snprintf(cmd, sizeof(cmd), "$wdiameter:%d#", wdiameter);  // 发送指令
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
+    char cmd[25];
+    snprintf(cmd, sizeof(cmd), "$wdiameter:%d#", wdiameter); // 发送指令
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /** @brief (bug)设置PID参数, 设置后芯片会重启，会把正在运动的电机停止
@@ -256,12 +228,11 @@ HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter)
   * @param d 微分系数
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d)
-{
-  // 发送指令
-  char cmd[50];
-  snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#", p, i, d);
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d) {
+    // 发送指令
+    char cmd[50];
+    snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#", p, i, d);
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /** * @brief 设置各个电机速度(单位mm/s)
@@ -271,15 +242,15 @@ HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d)
   * @param Vm4 电机4速度 (-1000到1000之间)
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int32_t Vm3, const int32_t Vm4)
-{
-  char cmd[50];
-  if (Vm1 < -1000 || Vm1 > 1000 || Vm2 < -1000 || Vm2 > 1000 || Vm3 < -1000 || Vm3 > 1000 || Vm4 < -1000 || Vm4 > 1000) {
-    return HAL_ERROR;  // 错误处理，速度值超出范围
-  }
-  snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
+HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int32_t Vm3, const int32_t Vm4) {
+    char cmd[50];
+    if (Vm1 < -1000 || Vm1 > 1000 || Vm2 < -1000 || Vm2 > 1000 || Vm3 < -1000 || Vm3 > 1000 || Vm4 < -1000 || Vm4 >
+        1000) {
+        return HAL_ERROR; // 错误处理，速度值超出范围
+    }
+    snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
 
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -287,10 +258,10 @@ HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int3
   * @param pwm 电机的PWM值数组，长度为4，范围为-3600到3600. 为负时表示反向转动，正时表示正向转动
   * @note 此函数会设置所有电机的PWM值，pwm[0]对应电机1，pwm[1]对应电机2，pwm[2]对应电机3，pwm[3]对应电机4
   */
-HAL_StatusTypeDef MDrv_SetPWM(int16_t* pwm) {
-  char cmd[50];
-  snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
-  return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, strlen(cmd), Uart_MaxWait);
+HAL_StatusTypeDef MDrv_SetPWM(int16_t *pwm) {
+    char cmd[50];
+    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -300,14 +271,14 @@ HAL_StatusTypeDef MDrv_SetPWM(int16_t* pwm) {
   * @note 此函数会设置所有电机的速度，Vm为正时表示正向转动，负时表示反向转动，0时表示停止
   */
 void MDrv_GoSpeed(int8_t mode, int32_t Vm) {
-  if (Vm > 0) {
-    if (mode == 1)
-      MDrv_SetSpeed(Vm, Vm, Vm, Vm); // 设置所有电机速度
-    else if (mode == -1)
-      MDrv_SetSpeed(-1 * Vm, -1 * Vm, -1 * Vm, -1 * Vm); // 转置所有电机速度
-    else if (mode == 0)
-      MDrv_SetSpeed(0, 0, 0, 0); // 停止所有电机
-  }
+    if (Vm > 0) {
+        if (mode == 1)
+            MDrv_SetSpeed(Vm, Vm, Vm, Vm); // 设置所有电机速度
+        else if (mode == -1)
+            MDrv_SetSpeed(-1 * Vm, -1 * Vm, -1 * Vm, -1 * Vm); // 转置所有电机速度
+        else if (mode == 0)
+            MDrv_SetSpeed(0, 0, 0, 0); // 停止所有电机
+    }
 }
 
 
@@ -319,86 +290,143 @@ void MDrv_GoSpeed(int8_t mode, int32_t Vm) {
   * @bug 2. 死区值需要测量得出，不能随意设置
   */
 void MDrv_Init() {
-  // MDrv_SetPID(0.8, 0.06, 0.5);
-  MDrv_SetSpeed(0,0,0,0);   // 设置电机速度
-  HAL_Delay(90);
-  MDrv_SetMtype(2);         // 设置为310电机
-  HAL_Delay(90);
-  Mdrv_SetMline(13);        // 设置电机的相位线
-  HAL_Delay(90);
-  Mdrv_SetMphase(20);       // 设置电机的减速比
-  HAL_Delay(90);
-  MDrv_SetWdiameter(48);    // 设置车轮直径
-  HAL_Delay(90);
-  MDrv_SetDeadzone(1650);   // 设置电机的pwm脉冲死区,需要测量得出
-  HAL_Delay(90);
+    // MDrv_SetPID(0.8, 0.06, 0.5);
+
+    HAL_Delay(90);
+    MDrv_SetMtype(2); // 设置为310电机
+    HAL_Delay(90);
+    Mdrv_SetMline(13); // 设置电机的相位线
+    HAL_Delay(90);
+    Mdrv_SetMphase(20); // 设置电机的减速比
+    HAL_Delay(90);
+    MDrv_SetWdiameter(48); // 设置车轮直径
+    HAL_Delay(90);
+    MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
+    HAL_Delay(90);
+    MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
+    HAL_Delay(90);
 }
 
 void MDrv_ProcessMALL(char *data) {
-  // 处理 $MALL 数据 代表轮子转动的总编码器数据
-  // 例如解析数据并存储到相应的变量中
-  // 假设数据格式为 "$MAll:23427,23801,24543,24453#"
-  sscanf(data, "$MAll:%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
+    // 处理 $MALL 数据 代表轮子转动的总编码器数据
+    // 例如解析数据并存储到相应的变量中
+    // 假设数据格式为 "$MAll:23427,23801,24543,24453#"
+    sscanf(data, "$MAll:%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
 }
 
 void MDrv_ProcessMTEP(char *data) {
-  // 处理 $MTEP 数据 代表轮子转动的实时转动编码器数据 10ms
-  // 例如解析数据并存储到相应的变量中
-  // 假设数据格式为 "$MTEP:63,64,66,66#"·
-  sscanf(data, "$MTEP:%d,%d,%d,%d", &mtep[0], &mtep[1], &mtep[2], &mtep[3]);
+    // 处理 $MTEP 数据 代表轮子转动的实时转动编码器数据 10ms
+    // 例如解析数据并存储到相应的变量中
+    // 假设数据格式为 "$MTEP:63,64,66,66#"·
+    sscanf(data, "$MTEP:%d,%d,%d,%d", &mtep[0], &mtep[1], &mtep[2], &mtep[3]);
 }
 
 void MDrv_ProcessMSPD(char *data) {
-  // 处理 $MSPD 数据 代表轮子转动的实时速度数据
-  // 例如解析数据并存储到相应的变量中
-  // 假设数据格式为 "$MSPD:608.99,618.65,637.98,637.98#"
-  // sscanf(data, "$MSPD:%f,%f,%f,%f", &mspd[0], &mspd[1], &mspd[2], &mspd[3]);
-  // if (mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) {
-  //   MDrv_SetPWM((mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) ? : ); // 设置电机1的PWM值
-  // }
-  //
-  //  MDrv_SetPWM(mtep) : (void)0;
-  // if (mspd[1] - V[1] > 0.1f || mspd[1] - V[1] < -0.1f) {
-  //
-  // }
-  // if (mspd[2] - V[2] > 0.1f || mspd[2] - V[2] < -0.1f) {
-  //
-  // }
-  // if (mspd[3] - V[3] > 0.1f || mspd[3] - V[3] < -0.1f) {
-  //
-  // }
-  //
-  //   // 如果速度变化超过阈值，更新V数组
-  //   memcpy(V, mspd, sizeof(V));
-
+    // 处理 $MSPD 数据 代表轮子转动的实时速度数据
+    // 例如解析数据并存储到相应的变量中
+    // 假设数据格式为 "$MSPD:608.99,618.65,637.98,637.98#"
+    // sscanf(data, "$MSPD:%f,%f,%f,%f", &mspd[0], &mspd[1], &mspd[2], &mspd[3]);
+    // if (mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) {
+    //   MDrv_SetPWM((mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) ? : ); // 设置电机1的PWM值
+    // }
+    //
+    //  MDrv_SetPWM(mtep) : (void)0;
+    // if (mspd[1] - V[1] > 0.1f || mspd[1] - V[1] < -0.1f) {
+    //
+    // }
+    // if (mspd[2] - V[2] > 0.1f || mspd[2] - V[2] < -0.1f) {
+    //
+    // }
+    // if (mspd[3] - V[3] > 0.1f || mspd[3] - V[3] < -0.1f) {
+    //
+    // }
+    //
+    //   // 如果速度变化超过阈值，更新V数组
+    //   memcpy(V, mspd, sizeof(V));
 }
 
 
 void MDrv_JudgeDataType(char *Udata) {
-  if (strncmp(Udata, "$MALL", 5) == 0) {
-    MDrv_ProcessMALL(Udata + 6);
-  }
-  else if (strncmp(Udata, "$MTEP", 5) == 0) {
-    MDrv_ProcessMTEP(Udata + 6);
-  }
-  else if (strncmp(Udata, "$MSPD", 5) == 0) {
-    MDrv_ProcessMSPD(Udata + 6);
-  }
-}
-
-void HAL_UART_RXCpltCallBack(UART_HandleTypeDef *huart) {
-  if (huart == &UMUART_Cfg) {
-    HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *)DataRecBuffer, 1);
-    if (DataRecBuffer[idx] == '#') {
-      DataRecBuffer[idx] = '\0';  // 结束字符串
-      MDrv_JudgeDataType(DataRecBuffer);
-      idx = 0;
+    if (strncmp(Udata, "$MALL", 5) == 0) {
+        MDrv_ProcessMALL(Udata + 6);
+    } else if (strncmp(Udata, "$MTEP", 5) == 0) {
+        MDrv_ProcessMTEP(Udata + 6);
+    } else if (strncmp(Udata, "$MSPD", 5) == 0) {
+        MDrv_ProcessMSPD(Udata + 6);
+    } else if (strncmp(Udata, "$Battery", 8) == 0) {
+        // Battery 电池电压数据
     }
-
-
-  }
 }
- 
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == UMUART_Cfg.Instance) {
+        uint8_t received_char = RxBuff[0]; // 获取接收到的字符
+        if (received_char == '$' && RxLine > 0) {
+            // 在一帧数据中间又收到了一个帧头，说明上一帧可能出错了
+            // 将其视为新一帧的开始
+            RxLine = 0; // 重置数据长度计数器
+            // memset((void*)DataBuff, 0, RX_BUFFER_SIZE); // 可选：清空旧数据
+        }
+        else if (received_char == '#') {
+            // 接收到帧尾 '#', 一帧数据接收完毕
+            DataBuff[RxLine] = '\0'; // 在数据末尾添加字符串结束符
+            MDrv_JudgeDataType((char *)DataBuff); // 处理完整的数据
+            RxLine = 0; // 清空长度，为下次做准备
+        }
+        else if (RxLine == 0 && received_char != '$') {
+            // 如果接收到的第一个字符不是帧头 '$'，则忽略此字符
+            // 这可以防止错误数据干扰接收
+            RxLine = 0; // 重置数据长度计数器
+        }
+        else if (received_char != '\r' && received_char != '\n') {
+            // 忽略回车和换行符
+            // 检查缓冲区是否溢出 (非常重要！)
+            if (RxLine < 500) {
+                DataBuff[RxLine++] = received_char; // 存入数据，长度加1
+            } else {
+                // 缓冲区溢出，丢弃此帧数据并重置状态
+                RxLine = 0;
+            }
+        }
+        // 无论在何种状态下，处理完一个字节后，都必须重新使能中断以接收下一个字节
+        HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *)RxBuff, 1);
+    }
+}
+
+// void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle) {
+//     if (UartHandle == &UMUART_Cfg) {
+//         RxLine++; //每接收到一个数据，进入回调数据长度加1
+//         DataBuff[RxLine - 1] = RxBuff[0]; //把每次接收到的数据保存到缓存数组
+//         if (RxBuff[0] == 0x24) //接收开始标志位 $
+//         {
+//             // RxLine = 1; // 重置接收长度
+//             HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1); // 继续接收下一个字节
+//             return;
+//             // memset(DataBuff, 0, sizeof(DataBuff)); //清空缓存数组
+//         }else if (RxBuff[0] == 0x23) // 接收结束标志位 #
+//         {
+//             DataBuff[RxLine] = '\0'; // 添加字符串结束符
+//             MDrv_JudgeDataType((char *) DataBuff); // 处理接收到的数据
+//             // memset(DataBuff, 0, sizeof(DataBuff)); // 清空缓存数组
+//             RxLine = 0; // 清空接收长度
+//         }else if (RxBuff[0] == 0x0A || RxBuff[0] == 0x0D) {
+//             // 换行符或回车符，忽略
+//             DataBuff[RxLine - 1] = '\0'; // 覆盖换行符
+//             RxLine = 0; // 重置接收长度
+//             MDrv_JudgeDataType(DataBuff); // 处理接收到的数据
+//             HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1); // 继续接收下一个字节
+//             return;
+//         }
+//         // other case
+//         // 继续接收下一个字节
+//         RxBuff[0] = 0;
+//         HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1);
+//         //每接收一个数据，就打开一次串口中断接收，否则只会接收一个数据就停止接收
+//     }
+// }
+//
+
 /* USER CODE END 0 */
 
 /**
@@ -430,24 +458,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  MDrv_Init();
-  HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t*) DataRecBuffer, 1);
+    MDrv_Init();
+    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$upload:0,0,1#", 14, Uart_MaxWait); // 开启上传数据
+    HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *) RxBuff, 1); //打开串口中断接收
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  MDrv_GoSpeed(1, 200);
-  HAL_Delay(2000);
-  MDrv_GoSpeed(-1,200);
-  while (1) {
     MDrv_GoSpeed(1, 100);
-    HAL_Delay(2000);
-    MDrv_GoSpeed(-1,100);
-    HAL_Delay(2000);
-  }
+    while (1) {
+    }
 
     /* USER CODE END WHILE */
 
@@ -562,6 +586,25 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+  /* DMA1_Channel7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -593,15 +636,13 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+    /* User can add his own implementation to report the HAL error return state */
+    __disable_irq();
+    while (1) {
+    }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
