@@ -1,0 +1,34 @@
+//
+// Created by Petercode on 25-7-9.
+//
+
+#ifndef MDRV_H
+#define MDRV_H
+
+void MDrv_ReadVol(char *charArray);
+
+HAL_StatusTypeDef MDrv_Reset();
+
+HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype);
+
+HAL_StatusTypeDef Mdrv_SetMline(uint8_t mline);
+
+HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase);
+
+HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone);
+
+HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter);
+
+HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d);
+
+HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int32_t Vm3, const int32_t Vm4);
+
+HAL_StatusTypeDef MDrv_SetPWM(int16_t *pwm) ;
+
+void MDrv_GoSpeed(int8_t mode, int32_t Vm);
+
+void MDrv_GoSpeed(int8_t mode, int32_t Vm);
+
+void MDrv_Init();
+
+#endif //MDRV_H
