@@ -18,11 +18,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usart.h"
+#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-
+#include "./../../YYFDrive/Mdrv.h"
 #include "string.h"
 /* USER CODE END Includes */
 
@@ -42,10 +44,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart2;
-DMA_HandleTypeDef hdma_usart2_rx;
-DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 float V[4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -62,10 +60,6 @@ float mspd[4];
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -73,52 +67,48 @@ static void MX_USART2_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-// UART
-#define PCUART_Cfg huart1           // PC 通信串口配置
-#define UMUART_Cfg huart2           // MCU-MCU 通信串口配置
-#define Uart_MaxWait (uint32_t)25  // 传输时间 = 字节数 × 10位 / 波特率 (10位=1+8+0+1)  30ms 建议100B内
 
-/** @brief  MCU 发送单个字节
-  * @param mode 1代表 to PC 2代表 to 驱动板
-  * @param pData 数据指针
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef UART_TransmitOnebit(const uint8_t mode, uint8_t *pData) {
-    // 1 代表 to PC 2代表 to 驱动板
-    return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
-}
-
-/** @brief  MCU 发送数据
-  * @param mode 1代表 to PC 2代表 to 驱动板
-  * @param pData 数据指针
-  * @param size 数据长度
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef UART_Transmit(const uint8_t mode, const uint8_t *pData, uint16_t size) {
-    // 1 代表 to PC 2代表 to 驱动板
-    return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, size, Uart_MaxWait);
-}
-
-/**
-  * @brief  MCU 发送字符串
-  * @param mode 1代表 to PC 2代表 to 驱动板
-  * @param String 字符串指针
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef UART_TransmitString(const uint8_t mode, const char *String) {
-    return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, (uint8_t *) String, strlen(String), Uart_MaxWait);
-}
-
-/**
-  * @brief  MCU 接收单个字节
-  * @param mode 1代表 to PC 2代表 to 驱动板
-  * @param pData 数据指针
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef UART_ReceiveOnebit(const uint8_t mode, uint8_t *pData) {
-    // 1 代表 to PC 2代表 to 驱动板
-    return HAL_UART_Receive((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
-}
+// /** @brief  MCU 发送单个字节
+//   * @param mode 1代表 to PC 2代表 to 驱动板
+//   * @param pData 数据指针
+//   * @retval HAL_StatusTypeDef 返回状态
+//   */
+// HAL_StatusTypeDef UART_TransmitOnebit(const uint8_t mode, uint8_t *pData) {
+//     // 1 代表 to PC 2代表 to 驱动板
+//     return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
+// }
+//
+// /** @brief  MCU 发送数据
+//   * @param mode 1代表 to PC 2代表 to 驱动板
+//   * @param pData 数据指针
+//   * @param size 数据长度
+//   * @retval HAL_StatusTypeDef 返回状态
+//   */
+// HAL_StatusTypeDef UART_Transmit(const uint8_t mode, const uint8_t *pData, uint16_t size) {
+//     // 1 代表 to PC 2代表 to 驱动板
+//     return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, size, Uart_MaxWait);
+// }
+//
+// /**
+//   * @brief  MCU 发送字符串
+//   * @param mode 1代表 to PC 2代表 to 驱动板
+//   * @param String 字符串指针
+//   * @retval HAL_StatusTypeDef 返回状态
+//   */
+// HAL_StatusTypeDef UART_TransmitString(const uint8_t mode, const char *String) {
+//     return HAL_UART_Transmit((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, (uint8_t *) String, strlen(String), Uart_MaxWait);
+// }
+//
+// /**
+//   * @brief  MCU 接收单个字节
+//   * @param mode 1代表 to PC 2代表 to 驱动板
+//   * @param pData 数据指针
+//   * @retval HAL_StatusTypeDef 返回状态
+//   */
+// HAL_StatusTypeDef UART_ReceiveOnebit(const uint8_t mode, uint8_t *pData) {
+//     // 1 代表 to PC 2代表 to 驱动板
+//     return HAL_UART_Receive((mode == 1) ? &PCUART_Cfg : &UMUART_Cfg, pData, 1, 10);
+// }
 
 
 // 可以使用DMA完成
@@ -147,165 +137,9 @@ char *MDrv_ReadFlash(char *charArray) {
     // return charArray;
 }
 
-void MDrv_ReadVol(char *charArray) {
-    // 接收放在中断内
-    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$read_vol#", 10, Uart_MaxWait);
-}
-
-/** @brief  (Checked)MCU 驱动板复位
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef MDrv_Reset() {
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$flash_reset#", 13, Uart_MaxWait);
-}
-
-/** @brief 配置电机类型
-  * @param mtype 电机类型，1: 520电机 2：310电机 3: TT电机(带有编码器的) 4: TT电机(不带编码器)
-  * @note 固件默认值为1 (520电机)
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype) {
-    char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mtype:%d#", mtype);
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-}
-
-/**
-  * @brief 配置电机的相位线
-  * @param mline 是霍尔编码器转一圈的相位，此值需要查商家电机的参数表可得
-  * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.配置电机霍尔编码器的相位为13线
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef Mdrv_SetMline(uint8_t mline) {
-    char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mline:%d#", mline); // 发送指令
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-}
-
-/**
-  * @brief 配置电机的减速比
-  * @param mphase 减速比，固件默认。此值需要查商家电机的参数表可得
-  * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.固件默认值30
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase) {
-    char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mphase:%d#", mphase); // 发送指令
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-}
-
-/**
-  * @brief 配置电机的pwm脉冲死区
-  * @param deadzone 死区值，范围0-3600。这个需要测量得出,可通过改变此值，消除电机最小震荡。死区值的范围(0-3600)
-  * @note 固件默认值1600.这样控制pwm时会默认加上死区的值，使得电机不会出现震荡区域
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone) {
-    char cmd[25];
-    if (deadzone <= 3600) {
-        // 确保死区值在0到3600之间
-        snprintf(cmd, sizeof(cmd), "$deadzone:%ld#", deadzone); // 发送指令
-        return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-    }
-    return HAL_ERROR; // 错误处理
-}
-
-/**
-  * @brief (可选)配置车轮直径
-  * @param wdiameter 车轮直径，单位为毫米
-  * @note 带编码器电机来说：此值对于控制速度起主要作用，此值单位为毫米（mm）；如果此值不正确，只会影响速度数据不准确，不会影响编码器的数据
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
-    char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$wdiameter:%d#", wdiameter); // 发送指令
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-}
-
-/** @brief (bug)设置PID参数, 设置后芯片会重启，会把正在运动的电机停止
-  * @param p 比例系数
-  * @param i 积分系数
-  * @param d 微分系数
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d) {
-    // 发送指令
-    char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#", p, i, d);
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-}
-
-/** * @brief 设置各个电机速度(单位mm/s)
-  * @param Vm1 电机1速度
-  * @param Vm2 电机2速度 (-1000到1000之间)
-  * @param Vm3 电机3速度 (-1000到1000之间)
-  * @param Vm4 电机4速度 (-1000到1000之间)
-  * @retval HAL_StatusTypeDef 返回状态
-  */
-HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int32_t Vm3, const int32_t Vm4) {
-    char cmd[50];
-    if (Vm1 < -1000 || Vm1 > 1000 || Vm2 < -1000 || Vm2 > 1000 || Vm3 < -1000 || Vm3 > 1000 || Vm4 < -1000 || Vm4 >
-        1000) {
-        return HAL_ERROR; // 错误处理，速度值超出范围
-    }
-    snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
-
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-}
-
-/**
-  * @brief 设置电机的PWM值
-  * @param pwm 电机的PWM值数组，长度为4，范围为-3600到3600. 为负时表示反向转动，正时表示正向转动
-  * @note 此函数会设置所有电机的PWM值，pwm[0]对应电机1，pwm[1]对应电机2，pwm[2]对应电机3，pwm[3]对应电机4
-  */
-HAL_StatusTypeDef MDrv_SetPWM(int16_t *pwm) {
-    char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
-}
-
-/**
-  * @brief 设置电机速度(单位mm/s)
-  * @param mode 1: 正向速度, -1: 反向速度, 0: 停止
-  * @param Vm 电机速度(单位mm/s),内部判断需为正。
-  * @note 此函数会设置所有电机的速度，Vm为正时表示正向转动，负时表示反向转动，0时表示停止
-  */
-void MDrv_GoSpeed(int8_t mode, int32_t Vm) {
-    if (Vm > 0) {
-        if (mode == 1)
-            MDrv_SetSpeed(Vm, Vm, Vm, Vm); // 设置所有电机速度
-        else if (mode == -1)
-            MDrv_SetSpeed(-1 * Vm, -1 * Vm, -1 * Vm, -1 * Vm); // 转置所有电机速度
-        else if (mode == 0)
-            MDrv_SetSpeed(0, 0, 0, 0); // 停止所有电机
-    }
-}
 
 
-/**
-  * @brief (bug)初始化驱动板
-  * @retval HAL_StatusTypeDef 返回状态
-  * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时90ms,收到HAL_OK只代表发出去不代表已经MD收到
-  * @bug 1. 设置电机速度无论延迟多少都无法正确设置，可能要收到单片机回传的正确时间
-  * @bug 2. 死区值需要测量得出，不能随意设置
-  */
-void MDrv_Init() {
-    // MDrv_SetPID(0.8, 0.06, 0.5);
 
-    HAL_Delay(90);
-    MDrv_SetMtype(2); // 设置为310电机
-    HAL_Delay(90);
-    Mdrv_SetMline(13); // 设置电机的相位线
-    HAL_Delay(90);
-    Mdrv_SetMphase(20); // 设置电机的减速比
-    HAL_Delay(90);
-    MDrv_SetWdiameter(48); // 设置车轮直径
-    HAL_Delay(90);
-    MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
-    HAL_Delay(90);
-    MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
-    HAL_Delay(90);
-}
 
 void MDrv_ProcessMALL(char *data) {
     // 处理 $MALL 数据 代表轮子转动的总编码器数据
@@ -358,39 +192,38 @@ void MDrv_JudgeDataType(char *Udata) {
     }
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == UMUART_Cfg.Instance) {
-        uint8_t received_char = RxBuff[0]; // 获取接收到的字符
-        if (received_char == '$' && RxLine > 0) {
-            // 在一帧数据中间又收到了一个帧头，说明上一帧可能出错了
-            // 将其视为新一帧的开始
-            RxLine = 0; // 重置数据长度计数器
-            // memset((void*)DataBuff, 0, RX_BUFFER_SIZE); // 可选：清空旧数据
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == huart2.Instance) {
+        uint8_t received_char = RxBuff[0];
+
+        // 检查是否是帧尾字符
+        if (received_char == '#') {
+            // 确保我们之前已经收到了一些数据
+            if (RxLine > 0) {
+                DataBuff[RxLine] = '\0'; // 添加字符串结束符
+                MDrv_JudgeDataType((char *)DataBuff); // 处理完整的数据
+            }
+            // 不论之前有无数据，收到帧尾都意味着一帧的结束，重置计数器
+            RxLine = 0;
         }
-        else if (received_char == '#') {
-            // 接收到帧尾 '#', 一帧数据接收完毕
-            DataBuff[RxLine] = '\0'; // 在数据末尾添加字符串结束符
-            MDrv_JudgeDataType((char *)DataBuff); // 处理完整的数据
-            RxLine = 0; // 清空长度，为下次做准备
-        }
-        else if (RxLine == 0 && received_char != '$') {
-            // 如果接收到的第一个字符不是帧头 '$'，则忽略此字符
-            // 这可以防止错误数据干扰接收
-            RxLine = 0; // 重置数据长度计数器
-        }
-        else if (received_char != '\r' && received_char != '\n') {
-            // 忽略回车和换行符
-            // 检查缓冲区是否溢出 (非常重要！)
-            if (RxLine < 500) {
-                DataBuff[RxLine++] = received_char; // 存入数据，长度加1
-            } else {
-                // 缓冲区溢出，丢弃此帧数据并重置状态
-                RxLine = 0;
+        // 如果不是帧尾，则为数据字节
+        else {
+            // 忽略回车和换行符，它们通常没有用
+            if (received_char != '\r' && received_char != '\n') {
+                // 检查缓冲区是否会溢出
+                if (RxLine < (500 - 1)) { // 留一个位置给 '\0'
+                    DataBuff[RxLine++] = received_char;
+                } else {
+                    // 缓冲区溢出，这是一个严重错误。丢弃当前所有数据并重置。
+                    // 最好在这里加一个错误处理，比如点亮一个LED。
+                    RxLine = 0;
+                }
             }
         }
-        // 无论在何种状态下，处理完一个字节后，都必须重新使能中断以接收下一个字节
-        HAL_UART_Receive_IT(&UMUART_Cfg, (uint8_t *)RxBuff, 1);
+
+        // 每次处理完一个字节后，必须重新使能中断以接收下一个字节！
+        // 这是保证连续接收的关键。
+        HAL_UART_Receive_IT(&huart2, (uint8_t *)RxBuff, 1);
     }
 }
 
@@ -458,7 +291,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
@@ -471,6 +303,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     MDrv_GoSpeed(1, 100);
     while (1) {
+
     }
 
     /* USER CODE END WHILE */
@@ -519,112 +352,6 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
-
-}
-
-/**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Channel6_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
-  /* DMA1_Channel7_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  /* USER CODE BEGIN MX_GPIO_Init_1 */
-
-  /* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
-
-  /* USER CODE END MX_GPIO_Init_2 */
-}
-
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
@@ -642,7 +369,8 @@ void Error_Handler(void)
     }
   /* USER CODE END Error_Handler_Debug */
 }
-#ifdef USE_FULL_ASSERT
+
+#ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
