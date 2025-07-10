@@ -25,7 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include "./../../YYFDrive/Mdrv.h"
+#include "Mdrv.h"
 #include "string.h"
 /* USER CODE END Includes */
 
