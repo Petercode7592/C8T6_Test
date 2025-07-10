@@ -37,7 +37,7 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/Mdrv.h
-        Drivers/YYFDrive/Mdrv.c)
+        Drivers/YYFDrive/Mdrv.c )
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

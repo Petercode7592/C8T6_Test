@@ -1,11 +1,15 @@
 //
 // Created by Petercode on 25-7-9.
 //
-#include "stm32f1xx_hal.h"
 #include "Mdrv.h"
 #include "stdio.h"
 #include "string.h"
 #include "usart.h"
+
+float mall[4] = {0};
+int mtep[4] = {0};
+float mspd[4] = {0};
+
 
 void MDrv_ReadVol(char *charArray) {
     // 接收放在中断内
@@ -108,7 +112,7 @@ HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int3
         1000) {
         return HAL_ERROR; // 错误处理，速度值超出范围
     }
-    snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
+    snprintf(cmd, sizeof(cmd), "$spd:%ld,%ld,%ld,%ld#", Vm1, Vm2, Vm3, Vm4);
 
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
@@ -123,6 +127,58 @@ HAL_StatusTypeDef MDrv_SetPWM(int16_t *pwm) {
     snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
+
+void MDrv_ProcessMALL(char *data) {
+    // 处理 $MALL 数据 代表轮子转动的总编码器数据
+    // 例如解析数据并存储到相应的变量中
+    // 假设数据格式为 "$MAll:23427,23801,24543,24453#"
+    sscanf(data, "$MAll:%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
+}
+
+void MDrv_ProcessMTEP(char *data) {
+    // 处理 $MTEP 数据 代表轮子转动的实时转动编码器数据 10ms
+    // 例如解析数据并存储到相应的变量中
+    // 假设数据格式为 "$MTEP:63,64,66,66#"·
+    sscanf(data, "$MTEP:%d,%d,%d,%d", &mtep[0], &mtep[1], &mtep[2], &mtep[3]);
+}
+
+void MDrv_ProcessMSPD(char *data) {
+    // 处理 $MSPD 数据 代表轮子转动的实时速度数据
+    // 例如解析数据并存储到相应的变量中
+    // 假设数据格式为 "$MSPD:608.99,618.65,637.98,637.98#"
+    // sscanf(data, "$MSPD:%f,%f,%f,%f", &mspd[0], &mspd[1], &mspd[2], &mspd[3]);
+    // if (mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) {
+    //   MDrv_SetPWM((mspd[0] - V[0] > 0.1f || mspd[0] - V[0] < -0.1f) ? : ); // 设置电机1的PWM值
+    // }
+    //
+    //  MDrv_SetPWM(mtep) : (void)0;
+    // if (mspd[1] - V[1] > 0.1f || mspd[1] - V[1] < -0.1f) {
+    //
+    // }
+    // if (mspd[2] - V[2] > 0.1f || mspd[2] - V[2] < -0.1f) {
+    //
+    // }
+    // if (mspd[3] - V[3] > 0.1f || mspd[3] - V[3] < -0.1f) {
+    //
+    // }
+    //
+    //   // 如果速度变化超过阈值，更新V数组
+    //   memcpy(V, mspd, sizeof(V));
+}
+
+
+void MDrv_JudgeDataType(char *Udata) {
+    if (strncmp(Udata, "$MALL", 5) == 0) {
+        MDrv_ProcessMALL(Udata + 6);
+    } else if (strncmp(Udata, "$MTEP", 5) == 0) {
+        MDrv_ProcessMTEP(Udata + 6);
+    } else if (strncmp(Udata, "$MSPD", 5) == 0) {
+        MDrv_ProcessMSPD(Udata + 6);
+    } else if (strncmp(Udata, "$Battery", 8) == 0) {
+        // Battery 电池电压数据
+    }
+}
+
 
 /**
   * @brief 设置电机速度(单位mm/s)
@@ -163,4 +219,30 @@ void MDrv_Init() {
     HAL_Delay(90);
     MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
     HAL_Delay(90);
+}
+
+// 可以使用DMA完成
+char* MDrv_ReadFlash(char *charArray) {
+    // // 发送指令
+    // HAL_StatusTypeDef status = HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$read_flash#", 12, Uart_MaxWait);
+    // if (status != HAL_OK)
+    //   return NULL;
+    //
+    // uint32_t index = 0;
+    // char ch = 0;
+    //
+    // while (index < 63)  // 预留1字节给 '\0'
+    // {
+    //   status = UART_ReceiveOnebit(1, (uint8_t*)&ch);
+    //   if (status != HAL_OK)
+    //     return NULL;  // 接收失败或超时，返回NULL
+    //
+    //   charArray[index++] = ch;
+    //
+    //   if (ch == '#')  // 遇到结束符，结束接收
+    //     break;
+    // }
+    //
+    // charArray[index] = '\0';  // 字符串结束符
+    // return charArray;
 }
