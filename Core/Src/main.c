@@ -71,7 +71,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   // 这个回调函数会在接收到数据时被调用
   if (huart->Instance == UMUART_Cfg.Instance) {
     MDrv_JudgeDataType(DataBuff); // 处理接收到的数据
-    HAL_UART_Transmit(&UMUART_Cfg, DataBuff, Size, Uart_MaxWait); // Debug【回传】
+    // HAL_UART_Transmit(&UMUART_Cfg, DataBuff, Size, Uart_MaxWait); // Debug【回传】
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 继续接收下一个字节
   }
 }
@@ -112,7 +112,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
     MDrv_Init();
-    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$upload:0,0,1#", 14, Uart_MaxWait); // 开启上传数据
+    Mdrv_UploadData(0,0,1); // 上传MSPD到MCU
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
   /* USER CODE END 2 */
 

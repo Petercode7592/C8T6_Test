@@ -90,6 +90,7 @@ HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
   * @param p 比例系数
   * @param i 积分系数
   * @param d 微分系数
+  * @note 注意使用 printf 搭配 %f 需要额外进行库的链接 ！
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d) {
@@ -125,6 +126,22 @@ HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int3
 HAL_StatusTypeDef MDrv_SetPWM(int16_t *pwm) {
     char cmd[50];
     snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+}
+
+/**
+  * @brief 上传数据
+  * @param mall 是否上传轮子转动的总编码器数据
+  * @param mtep 是否上传10ms转动的实时转动编码器数据(实际值)
+  * @param mspd 是否上传轮子转动的实时速度数据(计算值)
+  * @note mall, mtep, mspd分别为0或1，1代表回传该部分的数据
+  * @retval HAL_StatusTypeDef 返回状态
+  */
+HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall,  uint8_t mtep, uint8_t mspd) {
+    // 发送上传数据指令
+    // 假设mall, mtep, mspd是需要上传的数据 相应变量赋值1代表回传该部分的数据
+    char cmd[50];
+    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#", mall, mtep, mspd);
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
