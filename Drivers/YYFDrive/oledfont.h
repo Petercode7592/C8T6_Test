@@ -1,20 +1,13 @@
-//
-// Created by Petercode on 25-7-11.
-//
-
 #ifndef OLEDFONT_H
 #define OLEDFONT_H
 
-
-//----常规ASCII字库6*8----//
+// ASCII 字库 6x8
 extern const unsigned char F6x8[][6];
 
-//----常规ASCII字库8*16----//
+// ASCII 字库 8x16
 extern const unsigned char F8x16[];
 
-//----汉字字库16*16----//
-// 在c文件定义"HZK[3][32]"={{0x00...},{},{}};
+// 汉字字库 16x16，每个汉字占 32 字节
 extern const unsigned char HZK[][32];
 
-
-#endif //OLEDFONT_H
+#endif // OLEDFONT_H
