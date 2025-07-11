@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h" // 重定向 Printf
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -61,6 +61,14 @@ void Error_Handler(void);
 #define UUSART2_TX_GPIO_Port GPIOA
 #define UUSART_RX_Pin GPIO_PIN_3
 #define UUSART_RX_GPIO_Port GPIOA
+#define Track_L2X1_Pin GPIO_PIN_12
+#define Track_L2X1_GPIO_Port GPIOB
+#define Track_L1X2_Pin GPIO_PIN_13
+#define Track_L1X2_GPIO_Port GPIOB
+#define Track_R1X3_Pin GPIO_PIN_14
+#define Track_R1X3_GPIO_Port GPIOB
+#define Track_R2X4_Pin GPIO_PIN_15
+#define Track_R2X4_GPIO_Port GPIOB
 #define PCUSART_TX_Pin GPIO_PIN_9
 #define PCUSART_TX_GPIO_Port GPIOA
 #define PCUSART_RX_Pin GPIO_PIN_10

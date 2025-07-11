@@ -9,9 +9,8 @@
 
 float mall[4] = {0};
 int mtep[4] = {0};
-float mspd[4] = {0};
 
-extern float V[4];
+
 
 void MDrv_ReadVol(char *charArray) {
     // 接收放在中断内
@@ -109,17 +108,17 @@ HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d) {
   * @param Vm4 电机4速度 (-1000到1000之间)
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_SetSpeed(const int32_t Vm1, const int32_t Vm2, const int32_t Vm3, const int32_t Vm4) {
+HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t Vm4) {
     char cmd[50];
     if (Vm1 < -1000 || Vm1 > 1000 || Vm2 < -1000 || Vm2 > 1000 || Vm3 < -1000 || Vm3 > 1000 || Vm4 < -1000 || Vm4 >
         1000) {
         return HAL_ERROR; // 错误处理，速度值超出范围
     }
     snprintf(cmd, sizeof(cmd), "$spd:%ld,%ld,%ld,%ld#", Vm1, Vm2, Vm3, Vm4);
-    V[0] = Vm1; // 更新全局速度数组
-    V[1] = Vm2;
-    V[2] = Vm3;
-    V[3] = Vm4;
+    Vstd[0] = Vm1; // 更新全局速度数组
+    Vstd[1] = Vm2;
+    Vstd[2] = Vm3;
+    Vstd[3] = Vm4;
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -169,33 +168,32 @@ void MDrv_ProcessMSPD(char *data) {
     // 处理 $MSPD 数据 代表轮子转动的实时速度数据
     // 例如解析数据并存储到相应的变量中
     // 假设数据格式为 "$MSPD:608.99,618.65,637.98,637.98#"
-    sscanf(data, "$MSPD:%f,%f,%f,%f", &mspd[0], &mspd[1], &mspd[2], &mspd[3]);
-    int i = 0 , needUpdate = 0;
-    for (i = 0; i < 4; i++) {
-        // 将速度转换为绝对值
-        if (fabs(mspd[i]-V[i]) > 2.0f && fabs(mspd[i]-V[i]) < 10.0f && V[i] != 0) {
-            needUpdate = 1; // 如果速度变化超过0.1，标记需要更新
-            V[i] = V[i] + 0.5 * (V[i] - mspd[i]); // 更新V数组
-        }
-    }
-    // 如果速度变化超过阈值，更新V数组
-      // memcpy(V, mspd, sizeof(V));
-    if (needUpdate)
-        MDrv_SetSpeed(V[0], V[1], V[2], V[3]); // 更新电机速度
+    sscanf(data, "$MSPD:%f,%f,%f,%f", &V[0], &V[1], &V[2], &V[3]);
+    // 2. 准备一个数组来存放PID计算出的新速度
+    int32_t NewSpeed[4];
+
+    // 3. 调用PID模块来计算新速度
+    //    我们将期望值(Vstd)和实际值(V)传递给它，它会把结果填入NewSpeed
+    PID_Run_All_Motors(Vstd, V, NewSpeed);
+
+    // 4. 使用计算出的新速度去设置电机，完成闭环
+    MDrv_SetSpeed(NewSpeed[0], NewSpeed[1], NewSpeed[2], NewSpeed[3]);
+
+    // 这里的函数逻辑是错误的，不能通过比例的这种方式来修正速度，而是应该要引入闭环控制 PID
+    // int i = 0 , needUpdate = 0;
+    // for (i = 0; i < 4; i++) {
+    //     // 将速度转换为绝对值
+    //     if (Vstd[i] != 0 && fabsf((float)Vstd[i]-V[i]) > 5.0f && fabsf((float)Vstd[i]- V[i]) < 10.0f) {
+    //         needUpdate = 1; // 如果速度变化超过，标记需要更新
+    //         V[i] = (float)Vstd[i] * (float)Vstd[i] / V[i];
+    //     }
+    // }
+    // // 如果速度变化超过阈值，更新V数组
+    //   // memcpy(V, mspd, sizeof(V));
+    // if (needUpdate)
+    //     MDrv_SetSpeed(V[0], V[1], V[2], V[3]); // 更新电机速度
 }
 
-
-void MDrv_JudgeDataType(char *Udata) {
-    if (strncmp(Udata, "$MALL:", 6) == 0) {
-        MDrv_ProcessMALL(Udata + 6);
-    } else if (strncmp(Udata, "$MTEP:", 6) == 0) {
-        MDrv_ProcessMTEP(Udata + 6);
-    } else if (strncmp(Udata, "$MSPD:", 6) == 0) {
-        MDrv_ProcessMSPD(Udata + 6);
-    } else if (strncmp(Udata, "$Battery:", 9) == 0) {
-        // Battery 电池电压数据
-    }
-}
 
 
 /**
@@ -224,6 +222,7 @@ void MDrv_GoSpeed(int8_t mode, int32_t Vm) {
   */
 void MDrv_Init() {
     // MDrv_SetPID(0.8, 0.06, 0.5);
+    // P:1.9,I:0.2,D:0.8
     // HAL_Delay(90);
     MDrv_SetMtype(2); // 设置为310电机
     HAL_Delay(90);

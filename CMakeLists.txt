@@ -38,8 +38,15 @@ enable_language(C ASM)
 add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/Mdrv.h
         Drivers/YYFDrive/Mdrv.c
-        Drivers/YYFDrive/Tracking.h
-        Drivers/YYFDrive/Tracking.c)
+        Drivers/YYFDrive/LineWalking.h
+        Drivers/YYFDrive/LineWalking.c
+        Drivers/YYFDrive/Moto.c
+        Drivers/YYFDrive/Moto.h
+        Drivers/YYFDrive/PID.c
+        Drivers/YYFDrive/PID.h
+        Drivers/YYFDrive/MPU6050.c
+        Drivers/YYFDrive/MPU6050.h
+)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
