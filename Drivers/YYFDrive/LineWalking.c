@@ -44,7 +44,7 @@ void LineWalking()
         // Car_SpinRight(6800, 6800);
         HAL_Delay(10);
     }
-    else if (L2 == Low && R1 == High)                // 中间黑线上传感器微调车左转
+    else if (L2 == Low && R1 == High)             // 中间黑线上传感器微调车左转
     {   
         // Car_Left(6500);
     }

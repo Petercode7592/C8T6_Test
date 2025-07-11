@@ -28,12 +28,13 @@
 #include "Mdrv.h"
 #include "string.h"
 #include "MPU6050.h" // 包含MPU6050模块
+#include "oled.h"
 #include "PID.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -128,6 +129,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
     MDrv_Init();
     Mdrv_UploadData(0,0,1); // 上传MSPD到MCU
@@ -136,12 +138,32 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-    HAL_Delay(3000);
-    MDrv_GoSpeed(1, 200);
-    printf("")
-    while (1) {
+  // HAL_Delay(3000);
+  // MDrv_GoSpeed(1, 200);
+  OLED_Init(&hi2c2);
+  MPU6050_Init();
+  OLED_ShowString(1, 1, "MPU6050 Data", 8);
+  while (1) {
+    MPU6050_Read_All(&MPU6050_Data);
 
-    }
+    OLED_ShowFloat(1,2,MPU6050_Data.Ax,4,4,8);
+    OLED_ShowFloat(1,3,MPU6050_Data.Ay,4,4,8);
+    OLED_ShowFloat(1,4,MPU6050_Data.Az,4,4,8);
+    OLED_ShowFloat(1,5,MPU6050_Data.Gx,4,4,8);
+    OLED_ShowFloat(1,6,MPU6050_Data.Gy,4,4,8);
+    OLED_ShowFloat(1,7,MPU6050_Data.Gz,4,4,8);
+
+    // MPU6050_Read_Accel(&MPU6050_Data);
+    // sprintf(num,sizeof(num), "A:%f:%f:%f", &MPU6050_Data.Accel_X_RAW, &MPU6050_Data.Accel_Y_RAW, &MPU6050_Data.Accel_Z_RAW);
+
+    // OLED_ShowString(1,1,num[0], 8);
+    // OLED_ShowString(2,1,num[1], 8);
+    // OLED_ShowString(3,1,num[2], 8);
+
+    // HAL_UART_Transmit(&PCUART_Cfg, (uint8_t *) num,strlen(num), Uart_MaxWait);
+
+    // OLED_ShowNum(1,1,MPU6050_Data.Accel_X_RAW, 8,8);
+  }
 
     /* USER CODE END WHILE */
 

@@ -46,6 +46,10 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/PID.h
         Drivers/YYFDrive/MPU6050.c
         Drivers/YYFDrive/MPU6050.h
+        Drivers/YYFDrive/oled.c
+        Drivers/YYFDrive/oled.h
+        Drivers/YYFDrive/oledfont.c
+        Drivers/YYFDrive/oledfont.h
 )
 
 # Add STM32CubeMX generated sources

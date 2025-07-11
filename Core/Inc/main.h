@@ -61,6 +61,10 @@ void Error_Handler(void);
 #define UUSART2_TX_GPIO_Port GPIOA
 #define UUSART_RX_Pin GPIO_PIN_3
 #define UUSART_RX_GPIO_Port GPIOA
+#define OLED_SCL_Pin GPIO_PIN_10
+#define OLED_SCL_GPIO_Port GPIOB
+#define OLED_SDA_Pin GPIO_PIN_11
+#define OLED_SDA_GPIO_Port GPIOB
 #define Track_L2X1_Pin GPIO_PIN_12
 #define Track_L2X1_GPIO_Port GPIOB
 #define Track_L1X2_Pin GPIO_PIN_13
