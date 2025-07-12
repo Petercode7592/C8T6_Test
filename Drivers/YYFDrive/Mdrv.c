@@ -5,12 +5,14 @@
 #include "stdio.h"
 #include "string.h" // strlen
 #include "usart.h"
-#include "math.h"   // fabs
+#include <stdlib.h> // atof
 
 float mall[4] = {0};
 int mtep[4] = {0};
 
-
+float V[4];
+int32_t Vstd[4]; // 标准速度
+float Voltage;
 
 void MDrv_ReadVol(char *charArray) {
     // 接收放在中断内
@@ -168,18 +170,48 @@ void MDrv_ProcessMSPD(char *data) {
     // 处理 $MSPD 数据 代表轮子转动的实时速度数据
     // 例如解析数据并存储到相应的变量中
     // 假设数据格式为 "$MSPD:608.99,618.65,637.98,637.98#"
-    sscanf(data, "$MSPD:%f,%f,%f,%f", &V[0], &V[1], &V[2], &V[3]);
+
+    // 大坑！
+    // 只要前缀匹配并且浮点格式正确，后面的 #\r\n 会被忽略。
+    // 直接 # 是不行的 应为后面有 \r\n
+    // 格式字符串不要写死这些尾部符号，只用 %f 接浮点数据，后面多余字符就会被自动忽略
+    // 可以通过 sscanf 的返回值来判断是否解析成功
+
+    // 期望格式："608.99,618.65,637.98,637.98#\r\n"
+    char *ptr = data;
+    char temp[16];
+    int i = 0;
+
+    while (i < 4 && *ptr != '\0') {
+        int j = 0;
+
+        // 提取当前字段数字，直到逗号或结束符
+        while ((*ptr >= '0' && *ptr <= '9') || *ptr == '.' || *ptr == '-') {
+            if (j < sizeof(temp) - 1)
+                temp[j++] = *ptr;
+            ptr++;
+        }
+        temp[j] = '\0';
+
+        // 转换为 float 并存入 V[i]
+        if (j > 0)
+            V[i++] = atof(temp);
+
+        // 跳过逗号（如果有）
+        if (*ptr == ',') ptr++;
+    }
+
     // 2. 准备一个数组来存放PID计算出的新速度
-    int32_t NewSpeed[4];
+    // int32_t NewSpeed[4];
 
     // 3. 调用PID模块来计算新速度
     //    我们将期望值(Vstd)和实际值(V)传递给它，它会把结果填入NewSpeed
-    PID_Run_All_Motors(Vstd, V, NewSpeed);
+    // PID_Run_All_Motors(Vstd, V, NewSpeed);
 
     // 4. 使用计算出的新速度去设置电机，完成闭环
-    MDrv_SetSpeed(NewSpeed[0], NewSpeed[1], NewSpeed[2], NewSpeed[3]);
+    // MDrv_SetSpeed(NewSpeed[0], NewSpeed[1], NewSpeed[2], NewSpeed[3]);
 
-    // 这里的函数逻辑是错误的，不能通过比例的这种方式来修正速度，而是应该要引入闭环控制 PID
+    // 这里的函数逻辑是错误的，不能通过比例的这种方式来修正速度，而是应该要引入闭环控制 PID ——6050
     // int i = 0 , needUpdate = 0;
     // for (i = 0; i < 4; i++) {
     //     // 将速度转换为绝对值
@@ -194,7 +226,32 @@ void MDrv_ProcessMSPD(char *data) {
     //     MDrv_SetSpeed(V[0], V[1], V[2], V[3]); // 更新电机速度
 }
 
+void MDrv_ProcessVol(char *data) {
+    // data 示例："5.12V#\r\n"
+    char temp[16] = {0};
+    int i = 0;
 
+    // 提取数字字符直到遇到非数字/小数点（如 'V' 或 '#'）
+    while ((*data >= '0' && *data <= '9') || *data == '.' || *data == '-') {
+        if (i >= sizeof(temp) - 1) break;  // 防止溢出
+        temp[i++] = *data++;
+    }
+    temp[i] = '\0';
+
+    // 转换为 float
+    if (i > 0) {
+        Voltage = atof(temp);
+    }
+}
+
+/** @brief 读取电池电压
+  * @note 发送指令 "$read_vol#" 仅发送不解析数据
+  * @retval void
+  */
+void Mdrv_ReadVol() {
+    char cmd[] = "$read_vol#"; // 发送指令
+    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+}
 
 /**
   * @brief 设置电机速度(单位mm/s)

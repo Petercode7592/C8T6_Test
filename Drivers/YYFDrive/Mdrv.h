@@ -9,11 +9,12 @@
 #include "main.h"
 #include "PID.h"
 
-extern  float mall[4];
+extern float mall[4];
 extern int mtep[4];
 
-extern volatile float V[4];
-extern volatile int32_t Vstd[4]; // 标准速度
+extern float V[4];
+extern int32_t Vstd[4]; // 标准速度
+extern float Voltage; // 电池电压
 
 void MDrv_ReadVol(char *charArray);
 
@@ -31,7 +32,9 @@ HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall,  uint8_t mtep, uint8_t mspd);
 void MDrv_ProcessMALL(char *data);
 void MDrv_ProcessMTEP(char *data);
 void MDrv_ProcessMSPD(char *data);
+void MDrv_ProcessVol(char *data);
 
+void Mdrv_ReadVol();
 
 void MDrv_GoSpeed(int8_t mode, int32_t Vm);
 

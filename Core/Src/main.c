@@ -51,8 +51,7 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 
 /* USER CODE BEGIN PV */
 // volatile 代表变量可能会被中断或其他线程修改，防止编译器优化
-volatile float V[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-volatile int32_t Vstd[4] = {0, 0, 0, 0}; // 标准速度
+
 // volatile PID_Controller motor_pids[4];
 
 uint8_t RxBuff[1]; //进入中断接收数据的数组
@@ -78,6 +77,8 @@ void Uart_JudgeDataType(char *Udata) {
   } else if (strncmp(Udata, "$MSPD:", 6) == 0) {
     MDrv_ProcessMSPD(Udata + 6);
   } else if (strncmp(Udata, "$Battery:", 9) == 0) {
+    MDrv_ProcessVol(Udata + 9);
+
     // Battery 电池电压数据
   }
 }
@@ -91,6 +92,30 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     Uart_JudgeDataType(DataBuff); // [Debug 删除调速函数]处理接收到的数据
     // HAL_UART_Transmit(&UMUART_Cfg, DataBuff, Size, Uart_MaxWait); // Debug【回传】
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 继续接收下一个字节
+  }
+}
+
+void OLED_Debug(char mode) {
+  if (mode == 't') {
+    OLED_ShowString(1, 1, "M6050", 8);
+    OLED_ShowString(56, 1, "V", 8);
+    OLED_ShowString(104,1, "Vcc",8);
+    Mdrv_ReadVol();
+  }
+  else if (mode == 'c') {
+    MPU6050_Read_All(&MPU6050_Data);
+
+    OLED_ShowFloat(1,2,MPU6050_Data.Ax,4,3,8);
+    OLED_ShowFloat(1,3,MPU6050_Data.Ay,4,3,8);
+    OLED_ShowFloat(1,4,MPU6050_Data.Az,4,3,8);
+    OLED_ShowFloat(1,5,MPU6050_Data.Gx,4,3,8);
+    OLED_ShowFloat(1,6,MPU6050_Data.Gy,4,3,8);
+    OLED_ShowFloat(1,7,MPU6050_Data.Gz,4,3,8);
+    OLED_ShowFloat(50, 2, V[0],4,2,8);
+    OLED_ShowFloat(50, 3, V[1],4,2,8);
+    OLED_ShowFloat(50, 4, V[2],4,2,8);
+    OLED_ShowFloat(50, 5, V[3],4,2,8);
+    OLED_ShowFloat(104, 2, Voltage,1,2,8);
   }
 }
 
@@ -134,35 +159,23 @@ int main(void)
     MDrv_Init();
     Mdrv_UploadData(0,0,1); // 上传MSPD到MCU
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  // HAL_Delay(3000);
-  // MDrv_GoSpeed(1, 200);
+  HAL_Delay(3000);
+  MDrv_GoSpeed(1, 200);
+
   OLED_Init(&hi2c2);
   MPU6050_Init();
-  OLED_ShowString(1, 1, "MPU6050 Data", 8);
+
+  OLED_Debug('t');
+
   while (1) {
-    MPU6050_Read_All(&MPU6050_Data);
+    OLED_Debug('c');
 
-    OLED_ShowFloat(1,2,MPU6050_Data.Ax,4,4,8);
-    OLED_ShowFloat(1,3,MPU6050_Data.Ay,4,4,8);
-    OLED_ShowFloat(1,4,MPU6050_Data.Az,4,4,8);
-    OLED_ShowFloat(1,5,MPU6050_Data.Gx,4,4,8);
-    OLED_ShowFloat(1,6,MPU6050_Data.Gy,4,4,8);
-    OLED_ShowFloat(1,7,MPU6050_Data.Gz,4,4,8);
 
-    // MPU6050_Read_Accel(&MPU6050_Data);
-    // sprintf(num,sizeof(num), "A:%f:%f:%f", &MPU6050_Data.Accel_X_RAW, &MPU6050_Data.Accel_Y_RAW, &MPU6050_Data.Accel_Z_RAW);
-
-    // OLED_ShowString(1,1,num[0], 8);
-    // OLED_ShowString(2,1,num[1], 8);
-    // OLED_ShowString(3,1,num[2], 8);
-
-    // HAL_UART_Transmit(&PCUART_Cfg, (uint8_t *) num,strlen(num), Uart_MaxWait);
-
-    // OLED_ShowNum(1,1,MPU6050_Data.Accel_X_RAW, 8,8);
   }
 
     /* USER CODE END WHILE */
