@@ -7,6 +7,12 @@
 #include "usart.h"
 #include <stdlib.h> // atof
 
+/**
+ * M1 -> 左上电机（小车的左前轮）
+ * M2 -> 左下电机（小车的左后轮）
+ * M3 -> 右上电机（小车的右前轮）
+ * M4 -> 右下电机（小车的右后轮）
+*/
 float mall[4] = {0};
 int mtep[4] = {0};
 
@@ -129,9 +135,9 @@ HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t V
   * @param pwm 电机的PWM值数组，长度为4，范围为-3600到3600. 为负时表示反向转动，正时表示正向转动
   * @note 此函数会设置所有电机的PWM值，pwm[0]对应电机1，pwm[1]对应电机2，pwm[2]对应电机3，pwm[3]对应电机4
   */
-HAL_StatusTypeDef MDrv_SetPWM(int16_t *pwm) {
+HAL_StatusTypeDef MDrv_SetPWM(int32_t pwm1, int32_t pwm2, int32_t pwm3, int32_t pwm4) {
     char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm[0], pwm[1], pwm[2], pwm[3]);
+    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm1, pwm2, pwm3, pwm4);
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -156,14 +162,14 @@ void MDrv_ProcessMALL(char *data) {
     // 处理 $MALL 数据 代表轮子转动的总编码器数据
     // 例如解析数据并存储到相应的变量中
     // 假设数据格式为 "$MAll:23427,23801,24543,24453#"
-    sscanf(data, "$MAll:%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
+    sscanf(data, "%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
 }
 
 void MDrv_ProcessMTEP(char *data) {
     // 处理 $MTEP 数据 代表轮子转动的实时转动编码器数据 10ms
     // 例如解析数据并存储到相应的变量中
-    // 假设数据格式为 "$MTEP:63,64,66,66#"·
-    sscanf(data, "$MTEP:%d,%d,%d,%d", &mtep[0], &mtep[1], &mtep[2], &mtep[3]);
+    // 假设数据格式为 "63,64,66,66#"·
+    sscanf(data, "%d,%d,%d,%d", &mtep[0], &mtep[1], &mtep[2], &mtep[3]);
 }
 
 void MDrv_ProcessMSPD(char *data) {
@@ -260,7 +266,7 @@ void Mdrv_ReadVol() {
   * @note 此函数会设置所有电机的速度，Vm为正时表示正向转动，负时表示反向转动，0时表示停止
   */
 void MDrv_GoSpeed(int8_t mode, int32_t Vm) {
-    if (Vm > 0) {
+    if (Vm >= 0) {
         if (mode == 1)
             MDrv_SetSpeed(Vm, Vm, Vm, Vm); // 设置所有电机速度
         else if (mode == -1)
@@ -291,7 +297,8 @@ void MDrv_Init() {
     HAL_Delay(90);
     MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
     HAL_Delay(90);
-    MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
+    MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
+    // MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
     HAL_Delay(90);
 }
 

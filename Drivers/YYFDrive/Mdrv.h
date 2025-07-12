@@ -26,7 +26,7 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone);
 HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter);
 HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d);
 HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t Vm4);
-HAL_StatusTypeDef MDrv_SetPWM(int16_t *pwm) ;
+HAL_StatusTypeDef MDrv_SetPWM(int32_t pwm1, int32_t pwm2, int32_t pwm3, int32_t pwm4);
 HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall,  uint8_t mtep, uint8_t mspd);
 
 void MDrv_ProcessMALL(char *data);
