@@ -114,24 +114,27 @@ void OLED_Debug(char mode,uint8_t showtype) {
     if (mode == 'N') {
         if (showtype == 0) {
             OLED_ShowString(1, 1, "M6050", 8);
-            OLED_ShowString(56, 1, "V", 8);
-            OLED_ShowString(104, 1, "Vcc", 8);
-            Mdrv_ReadVol();
+            OLED_ShowString(42, 1, "V", 8);
+            OLED_ShowString(90u, 1, "Vcc", 8);
+            OLED_ShowString(90,3,"Rot",8);
         } else if (showtype == 1) {
             // OLED 显示 MPU6050 数据 和更新电压数据
-            OLED_ShowFloat(1, 2, MPU6050_Data.Ax, 4, 3, 8);
-            OLED_ShowFloat(1, 3, MPU6050_Data.Ay, 4, 3, 8);
-            OLED_ShowFloat(1, 4, MPU6050_Data.Az, 4, 3, 8);
-            OLED_ShowFloat(1, 5, MPU6050_Data.Gx, 4, 3, 8);
-            OLED_ShowFloat(1, 6, MPU6050_Data.Gy, 4, 3, 8);
-            OLED_ShowFloat(1, 7, MPU6050_Data.Gz, 4, 3, 8);
-            OLED_ShowFloat(48, 2, V[0], 3, 2, 8);
-            OLED_ShowFloat(48, 3, V[1], 3, 2, 8);
-            OLED_ShowFloat(48, 4, V[2], 3, 2, 8);
-            OLED_ShowFloat(48, 5, V[3], 3, 2, 8);
-            OLED_ShowFloat(96, 2, Voltage, 1, 2, 8);
-            OLED_ShowFloat(96, 4,MPU6050_Data.KalmanAngleX, 3, 2, 8);
-            OLED_ShowFloat(96, 5,MPU6050_Data.KalmanAngleY, 3, 2, 8);
+            OLED_ShowFloat(1, 2, MPU6050_Data.Ax, 3, 2, 8);
+            OLED_ShowFloat(1, 3, MPU6050_Data.Ay, 3, 2, 8);
+            OLED_ShowFloat(1, 4, MPU6050_Data.Az, 3, 2, 8);
+            OLED_ShowFloat(1, 5, MPU6050_Data.Gx, 3, 2, 8);
+            OLED_ShowFloat(1, 6, MPU6050_Data.Gy, 3, 2, 8);
+            OLED_ShowFloat(1, 7, MPU6050_Data.Gz, 3, 2, 8);
+            OLED_ShowFloat(40, 2, V[0], 3, 2, 8);
+            OLED_ShowFloat(40, 3, V[1], 3, 2, 8);
+            OLED_ShowFloat(40, 4, V[2], 3, 2, 8);
+            OLED_ShowFloat(40, 5, V[3], 3, 2, 8);
+            OLED_ShowFloat(88, 2, Voltage, 1, 2, 8);
+            OLED_ShowFloat(88, 4,MPU6050_Data.KalmanAngleX, 3, 2, 8);
+            OLED_ShowFloat(88, 5,MPU6050_Data.KalmanAngleY, 3, 2, 8);
+            OLED_ShowFloat(88, 6,MPU6050_Data.YawAngle, 3, 2, 8);
+            // OLED_ShowFloat(90, 7, MPU6050_Data.Temperature, 3, 2, 8);
+            // 不是哥们开着23度空调说我们室内30度吗？哈哈
         }
     }
     else if (mode == 'L') {
@@ -148,25 +151,6 @@ void OLED_Debug(char mode,uint8_t showtype) {
             OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
         }
     }
-    else if (mode == 'H') {
-        // OLED 显示 HW290B 数据
-        if (showtype == 0) {
-            OLED_ShowString(1, 1, "HW290B", 8);
-        } else if (showtype == 1) {
-            // 显示 HW290B 数据
-            // OLED_ShowFloat(1,2,HW290B_Data.ax,3,3,8 );
-            // OLED_ShowFloat(1,3,HW290B_Data.ay,3,3,8 );
-            // OLED_ShowFloat(1,4,HW290B_Data.az,3,3,8 );
-            // OLED_ShowFloat(1,5,HW290B_Data.gx,3,3,8 );
-            // OLED_ShowFloat(1,6,HW290B_Data.gy,3,3,8 );
-            // OLED_ShowFloat(1,7,HW290B_Data.gz,3,3,8 );
-            // OLED_ShowFloat(60,2,HW290B_Data.mx,3,3,8);
-            // OLED_ShowFloat(60,3,HW290B_Data.my,3,3,8);
-            // OLED_ShowFloat(60,4,HW290B_Data.mz,3,3,8);
-            // OLED_ShowFloat(60,6,HW290B_Data.pressure,3,3,8);
-            // OLED_ShowFloat(60,7,HW290B_Data.temperature,3,3,8);
-        }
-    }
 }
 
 /* USER CODE END 0 */
@@ -176,6 +160,7 @@ void OLED_Debug(char mode,uint8_t showtype) {
   * @retval int
   */
 int main(void) {
+
     /* USER CODE BEGIN 1 */
 
     /* USER CODE END 1 */
@@ -209,7 +194,7 @@ int main(void) {
     MDrv_Init(); // 初始化驱动板
     OLED_Init(&hi2c2);
 
-    MPU6050_Init();
+
     // HW290B_InitHandle(&hi2c1);
 
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
@@ -217,6 +202,7 @@ int main(void) {
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
     HAL_TIM_Base_Start_IT(&htim2); // 50ms启动定时器中断
     HAL_Delay(5000);
+    MPU6050_Init();
     // MDrv_GoSpeed(1, 100);
     /* USER CODE END 2 */
 
@@ -224,6 +210,7 @@ int main(void) {
     /* USER CODE BEGIN WHILE */
     while (1) {
         OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
+        MDrv_GoSpeed(1,200);
         // LineWalking(&LineWalking_Data); // 处理 LineWalking 数据`
     }
 

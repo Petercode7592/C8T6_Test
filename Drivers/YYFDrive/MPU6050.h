@@ -3,9 +3,10 @@
 
 #include "main.h"
 
-// 根据您在CubeMX中的配置，修改为正确的I2C句柄
+// 根据您在CubeMX中的配置，修改为正确的I2C句柄，例如 hi2c2
 extern I2C_HandleTypeDef hi2c1;
 
+// MPU6050 的 I2C 地址 (如果 AD0 接地，地址为 0x68)
 #define MPU6050_ADDR 0xD0
 
 // MPU6050 内部寄存器地址
@@ -18,10 +19,10 @@ extern I2C_HandleTypeDef hi2c1;
 #define GYRO_CONFIG_REG     0x1B
 #define GYRO_XOUT_H_REG     0x43
 
-// MPU6050 数据结构体
+// MPU6050 数据结构体，用于存储所有相关数据
 typedef struct
 {
-    // --- 原始数据 ---
+    // --- 原始数据 (16位，有符号) ---
     int16_t Accel_X_RAW;
     int16_t Accel_Y_RAW;
     int16_t Accel_Z_RAW;
@@ -36,9 +37,10 @@ typedef struct
 
     float Temperature; // 温度，单位 °C
 
-    // --- 卡尔曼滤波后的角度 ---
-    double KalmanAngleX;
-    double KalmanAngleY;
+    // --- 滤波/计算后的角度 ---
+    double KalmanAngleX; // X轴（Roll）卡尔曼滤波后的角度
+    double KalmanAngleY; // Y轴（Pitch）卡尔曼滤波后的角度
+    double YawAngle;     // Z轴（Yaw）积分得到的相对航向角
 
 } MPU6050_Data_t;
 
@@ -63,38 +65,10 @@ typedef struct {
 uint8_t MPU6050_Init(void);
 
 /**
- * @brief 从 MPU6050 读取加速度计数据
- * @param DataStruct: 指向 MPU6050_Data_t 结构体的指针，用于存储数据
- */
-void MPU6050_Read_Accel(MPU6050_Data_t *DataStruct);
-
-/**
- * @brief 从 MPU6050 读取陀螺仪数据
- * @param DataStruct: 指向 MPU6050_Data_t 结构体的指针，用于存储数据
- */
-void MPU6050_Read_Gyro(MPU6050_Data_t *DataStruct);
-
-/**
- * @brief 从 MPU6050 读取温度数据
- * @param DataStruct: 指向 MPU6050_Data_t 结构体的指针，用于存储数据
- */
-void MPU6050_Read_Temp(MPU6050_Data_t *DataStruct);
-
-/**
- * @brief 一次性读取 MPU6050 所有传感器数据并进行卡尔曼滤波
+ * @brief 一次性读取 MPU6050 所有传感器数据，并进行卡尔曼滤波和航向角计算
  * @param DataStruct: 指向 MPU6050_Data_t 结构体的指针，用于存储数据
  */
 void MPU6050_Read_All(MPU6050_Data_t *DataStruct);
-
-/**
- * @brief 卡尔曼滤波计算
- * @param Kalman: 指向卡尔曼结构体的指针
- * @param newAngle: 新的角度测量值 (来自加速度计)
- * @param newRate: 新的角速度测量值 (来自陀螺仪)
- * @param dt: 时间间隔 (s)
- * @retval 滤波后的角度
- */
-double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt);
 
 
 #endif /* MPU6050_H_ */
