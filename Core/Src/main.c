@@ -114,9 +114,9 @@ void OLED_Debug(char mode,uint8_t showtype) {
     if (mode == 'N') {
         if (showtype == 0) {
             OLED_ShowString(1, 1, "M6050", 8);
-            OLED_ShowString(42, 1, "V", 8);
-            OLED_ShowString(90u, 1, "Vcc", 8);
-            OLED_ShowString(90,3,"Rot",8);
+            OLED_ShowString(45,1, "V", 8);
+            OLED_ShowString(90,1,"Rot",8);
+            OLED_ShowString(115,7,"V",8);
         } else if (showtype == 1) {
             // OLED 显示 MPU6050 数据 和更新电压数据
             OLED_ShowFloat(1, 2, MPU6050_Data.Ax, 3, 2, 8);
@@ -129,10 +129,10 @@ void OLED_Debug(char mode,uint8_t showtype) {
             OLED_ShowFloat(40, 3, V[1], 3, 2, 8);
             OLED_ShowFloat(40, 4, V[2], 3, 2, 8);
             OLED_ShowFloat(40, 5, V[3], 3, 2, 8);
-            OLED_ShowFloat(88, 2, Voltage, 1, 2, 8);
-            OLED_ShowFloat(88, 4,MPU6050_Data.KalmanAngleX, 3, 2, 8);
-            OLED_ShowFloat(88, 5,MPU6050_Data.KalmanAngleY, 3, 2, 8);
-            OLED_ShowFloat(88, 6,MPU6050_Data.YawAngle, 3, 2, 8);
+            OLED_ShowFloat(80, 7, Voltage, 1, 2, 8);
+            OLED_ShowFloat(85, 2,MPU6050_Data.KalmanAngleX, 3, 2, 8);
+            OLED_ShowFloat(85, 3,MPU6050_Data.KalmanAngleY, 3, 2, 8);
+            OLED_ShowFloat(85, 4,MPU6050_Data.YawAngle, 3, 2, 8);
             // OLED_ShowFloat(90, 7, MPU6050_Data.Temperature, 3, 2, 8);
             // 不是哥们开着23度空调说我们室内30度吗？哈哈
         }
@@ -190,20 +190,21 @@ int main(void) {
     MX_I2C2_Init();
     MX_TIM2_Init(); // 50ms基本定时器
     /* USER CODE BEGIN 2 */
-
     MDrv_Init(); // 初始化驱动板
     OLED_Init(&hi2c2);
-
-
-    // HW290B_InitHandle(&hi2c1);
+    HAL_Delay(2000);
 
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
-    OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
     HAL_TIM_Base_Start_IT(&htim2); // 50ms启动定时器中断
-    HAL_Delay(5000);
+
     MPU6050_Init();
-    // MDrv_GoSpeed(1, 100);
+    OLED_ShowString(1,1, "MPU6050 Init....", 8);
+    MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
+    OLED_Clear();
+    HAL_Delay(1000);
+    OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
+
     /* USER CODE END 2 */
 
     /* Infinite loop */
