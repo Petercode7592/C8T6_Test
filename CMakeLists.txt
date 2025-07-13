@@ -52,6 +52,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/oledfont.h
         Drivers/YYFDrive/bluetooth.c
         Drivers/YYFDrive/bluetooth.h
+        Drivers/YYFDrive/HW290B.c
+        Drivers/YYFDrive/HW290B.h
 )
 
 # Add STM32CubeMX generated sources

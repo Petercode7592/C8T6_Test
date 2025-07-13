@@ -83,17 +83,16 @@ void Uart_JudgeDataType(char *Udata) {
         MDrv_ProcessMSPD(Udata + 6);
     } else if (strncmp(Udata, "$Battery:", 9) == 0) {
         MDrv_ProcessVol(Udata + 9);
-
-        // Battery 电池电压数据
     }
 }
 
+// 定时器50ms回调函数
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM2) {
         // 每50ms执行一次
         MPU6050_Read_All(&MPU6050_Data); // 读取MPU6050数据
         // Mdrv_ReadVol(); // 读取电池电压
-        GetLineWalking(&LineWalking_Data);
+        // GetLineWalking(&LineWalking_Data);
         // Bluetooth_ReportData(V[0], V[2], MPU6050_Data.Ax, MPU6050_Data.Gx, 0, Voltage);
     }
 }
@@ -147,6 +146,25 @@ void OLED_Debug(char mode,uint8_t showtype) {
             OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
         }
     }
+    else if (mode == 'H') {
+        // OLED 显示 HW290B 数据
+        if (showtype == 0) {
+            OLED_ShowString(1, 1, "HW290B", 8);
+        } else if (showtype == 1) {
+            // 显示 HW290B 数据
+            // OLED_ShowFloat(1,2,HW290B_Data.ax,3,3,8 );
+            // OLED_ShowFloat(1,3,HW290B_Data.ay,3,3,8 );
+            // OLED_ShowFloat(1,4,HW290B_Data.az,3,3,8 );
+            // OLED_ShowFloat(1,5,HW290B_Data.gx,3,3,8 );
+            // OLED_ShowFloat(1,6,HW290B_Data.gy,3,3,8 );
+            // OLED_ShowFloat(1,7,HW290B_Data.gz,3,3,8 );
+            // OLED_ShowFloat(60,2,HW290B_Data.mx,3,3,8);
+            // OLED_ShowFloat(60,3,HW290B_Data.my,3,3,8);
+            // OLED_ShowFloat(60,4,HW290B_Data.mz,3,3,8);
+            // OLED_ShowFloat(60,6,HW290B_Data.pressure,3,3,8);
+            // OLED_ShowFloat(60,7,HW290B_Data.temperature,3,3,8);
+        }
+    }
 }
 
 /* USER CODE END 0 */
@@ -188,21 +206,23 @@ int main(void) {
 
     MDrv_Init(); // 初始化驱动板
     OLED_Init(&hi2c2);
+
     MPU6050_Init();
+    // HW290B_InitHandle(&hi2c1);
+
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
     OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
     HAL_TIM_Base_Start_IT(&htim2); // 50ms启动定时器中断
     HAL_Delay(5000);
-    MDrv_GoSpeed(1, 100);
+    // MDrv_GoSpeed(1, 100);
     /* USER CODE END 2 */
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1) {
         OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
-        LineWalking(&LineWalking_Data); // 处理 LineWalking 数据
-
+        // LineWalking(&LineWalking_Data); // 处理 LineWalking 数据`
     }
 
     /* USER CODE END WHILE */

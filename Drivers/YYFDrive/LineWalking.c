@@ -9,7 +9,6 @@
 #define High GPIO_PIN_SET
 #define Low GPIO_PIN_RESET
 
-
 void GetLineWalking(LineWalkingState_t *state) {
     state->Left1 = HAL_GPIO_ReadPin(Track_L1X2_GPIO_Port, Track_L1X2_Pin);
     state->Left2 = HAL_GPIO_ReadPin(Track_L2X1_GPIO_Port, Track_L2X1_Pin);
