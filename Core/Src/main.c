@@ -91,7 +91,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM2) {
         // 每50ms执行一次
         MPU6050_Read_All(&MPU6050_Data); // 读取MPU6050数据
-        // Mdrv_ReadVol(); // 读取电池电压
+        Mdrv_ReadVol(); // 读取电池电压
         // GetLineWalking(&LineWalking_Data);
         // Bluetooth_ReportData(V[0], V[2], MPU6050_Data.Ax, MPU6050_Data.Gx, 0, Voltage);
     }
@@ -130,6 +130,8 @@ void OLED_Debug(char mode,uint8_t showtype) {
             OLED_ShowFloat(48, 4, V[2], 3, 2, 8);
             OLED_ShowFloat(48, 5, V[3], 3, 2, 8);
             OLED_ShowFloat(96, 2, Voltage, 1, 2, 8);
+            OLED_ShowFloat(96, 4,MPU6050_Data.KalmanAngleX, 3, 2, 8);
+            OLED_ShowFloat(96, 5,MPU6050_Data.KalmanAngleY, 3, 2, 8);
         }
     }
     else if (mode == 'L') {
