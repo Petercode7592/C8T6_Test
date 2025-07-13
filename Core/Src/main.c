@@ -110,18 +110,15 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     }
 }
 
-/**
- * @brief OLED 显示调试信息
- * @param mode 't' 抬头，'c' 显示数据
- */
-void OLED_Debug(char mode,char show) {
+
+void OLED_Debug(char mode,uint8_t showtype) {
     if (mode == 'N') {
-        if (show == 't') {
+        if (showtype == 0) {
             OLED_ShowString(1, 1, "M6050", 8);
             OLED_ShowString(56, 1, "V", 8);
             OLED_ShowString(104, 1, "Vcc", 8);
             Mdrv_ReadVol();
-        } else if (show == 'c') {
+        } else if (showtype == 1) {
             // OLED 显示 MPU6050 数据 和更新电压数据
             OLED_ShowFloat(1, 2, MPU6050_Data.Ax, 4, 3, 8);
             OLED_ShowFloat(1, 3, MPU6050_Data.Ay, 4, 3, 8);
@@ -138,17 +135,16 @@ void OLED_Debug(char mode,char show) {
     }
     else if (mode == 'L') {
         // OLED 显示 LineWalking 数据
-        if (show == 't') {
+        if (showtype == 0) {
             OLED_ShowString(1,7, "LineWalking", 8);
             OLED_ShowString(1, 1, "L2 L1 R1 R2", 8);
         }
-        else if (show == 'c') {
+        else if (showtype == 1) {
             // 显示 LineWalking 数据
             OLED_ShowNum(1,2,LineWalking_Data.Left2, 1,8);
             OLED_ShowNum(18,2,LineWalking_Data.Left1, 1,8);
             OLED_ShowNum(36,2,LineWalking_Data.Right1, 1,8);
             OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
-
         }
     }
 }
@@ -194,7 +190,7 @@ int main(void) {
     OLED_Init(&hi2c2);
     MPU6050_Init();
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
-    OLED_Debug('N', 't'); // OLED 显示 LineWalking 模块标题
+    OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
     HAL_TIM_Base_Start_IT(&htim2); // 50ms启动定时器中断
     HAL_Delay(5000);
@@ -204,8 +200,8 @@ int main(void) {
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1) {
-        OLED_Debug('N', 'c'); // OLED 显示 LineWalking 数据
-        // LineWalking(&LineWalking_Data); // 处理 LineWalking 数据
+        OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
+        LineWalking(&LineWalking_Data); // 处理 LineWalking 数据
 
     }
 
