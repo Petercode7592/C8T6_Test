@@ -91,7 +91,7 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
     DataStruct->Accel_X_RAW = (int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
     DataStruct->Accel_Y_RAW = (int16_t)(Rec_Data[2] << 8 | Rec_Data[3]);
     DataStruct->Accel_Z_RAW = (int16_t)(Rec_Data[4] << 8 | Rec_Data[5]);
-    // temp_raw = (int16_t) (Rec_Data[6] << 8 | Rec_Data[7]);
+    temp_raw = (int16_t) (Rec_Data[6] << 8 | Rec_Data[7]);
     DataStruct->Gyro_X_RAW  = (int16_t)(Rec_Data[8] << 8 | Rec_Data[9]);
     DataStruct->Gyro_Y_RAW  = (int16_t)(Rec_Data[10] << 8 | Rec_Data[11]);
     DataStruct->Gyro_Z_RAW  = (int16_t)(Rec_Data[12] << 8 | Rec_Data[13]);
@@ -99,7 +99,7 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
     DataStruct->Ax = DataStruct->Accel_X_RAW / ACCEL_SENSITIVITY;
     DataStruct->Ay = DataStruct->Accel_Y_RAW / ACCEL_SENSITIVITY;
     DataStruct->Az = DataStruct->Accel_Z_RAW / ACCEL_SENSITIVITY;
-    // DataStruct->Temperature = (temp_raw / 340.0) + 36.53;
+    DataStruct->Temperature = (temp_raw / 340.0) + 36.53;
     DataStruct->Gx = DataStruct->Gyro_X_RAW / GYRO_SENSITIVITY;
     DataStruct->Gy = DataStruct->Gyro_Y_RAW / GYRO_SENSITIVITY;
     DataStruct->Gz = DataStruct->Gyro_Z_RAW / GYRO_SENSITIVITY;
@@ -123,6 +123,20 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
     DataStruct->YawAngle = currentYaw;
 }
 
+double MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) {
+
+    uint8_t Rec_Data[14];
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
+    DataStruct->Gyro_Z_RAW  = (int16_t)(Rec_Data[12] << 8 | Rec_Data[13]);
+    DataStruct->Gz = DataStruct->Gyro_Z_RAW / GYRO_SENSITIVITY;
+    double dt = (double)(HAL_GetTick() - timer) / 1000.0;
+    timer = HAL_GetTick();
+    double gz_calibrated = DataStruct->Gz - gz_bias;
+    // 使用校准后的Gz值进行积分
+    currentYaw += gz_calibrated * dt;
+    DataStruct->YawAngle = currentYaw;
+    return currentYaw;
+}
 
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt)
 {

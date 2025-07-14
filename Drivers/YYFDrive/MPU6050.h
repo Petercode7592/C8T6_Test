@@ -74,5 +74,11 @@ void MPU6050_Calibrate_Gyro(void);
  */
 void MPU6050_Read_All(MPU6050_Data_t *DataStruct);
 
+/**
+ * @brief 获取当前的偏航角（Yaw Angle）
+ * @param DataStruct: 指向 MPU6050_Data_t 结构体的指针
+ * @retval 当前偏航角（单位：度）
+ */
+double MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct);
 
 #endif /* MPU6050_H_ */
