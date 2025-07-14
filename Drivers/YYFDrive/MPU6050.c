@@ -14,38 +14,39 @@ static uint32_t timer;
 static double currentYaw = 0.0;
 
 // 新增：用于存储陀螺仪XYZ三轴偏置的变量
-static float gx_bias = 0.0f;
-static float gy_bias = 0.0f;
-static float gz_bias = 0.0f;
+static float gx_bias=0, gy_bias=0, gz_bias=0;
+
+static double  yaw_acc = 0;
 
 
 // --- 私有函数声明 ---
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt);
 
+static inline void wr(uint8_t reg, uint8_t val)
+{
+    uint8_t d[2] = {reg,val};
+    HAL_I2C_Master_Transmit(&hi2c1, MPU6050_ADDR, d, 2, 100);
+}
 
 // --- 公共函数定义 ---
 
+/* ───── 初始化 ───── */
 uint8_t MPU6050_Init(void)
 {
-    uint8_t check;
-    uint8_t Data;
+    uint8_t id;
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, WHO_AM_I_REG,1,&id,1,100);
+    if (id != 0x68) return 1;
 
-    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, WHO_AM_I_REG, 1, &check, 1, 1000);
+    wr(PWR_MGMT_1_REG, 0x01);    /* PLL with X-gyro */
+    wr(SMPLRT_DIV_REG, 0x09);    /* 100 Hz */
+    wr(CONFIG_REG,      0x03);   /* DLPF 42 Hz  */
+    wr(ACCEL_CONFIG_REG,0x00);   /* ±2 g        */
+    wr(GYRO_CONFIG_REG ,0x00);   /* ±250°/s     */
+    wr(INT_PIN_CFG_REG ,0x10);   /* INT_RD_CLEAR=1 推挽高电平 */
+    wr(INT_ENABLE_REG  ,0x01);   /* DATA_RDY_INT  */
 
-    if (check == 0x68)
-    {
-        Data = 0;
-        HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, PWR_MGMT_1_REG, 1, &Data, 1, 1000);
-        Data = 0x07;
-        HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, SMPLRT_DIV_REG, 1, &Data, 1, 1000);
-        Data = 0x00;
-        HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ACCEL_CONFIG_REG, 1, &Data, 1, 1000);
-        Data = 0x00;
-        HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, GYRO_CONFIG_REG, 1, &Data, 1, 1000);
-        timer = HAL_GetTick();
-        return 0;
-    }
-    return 1;
+    timer = HAL_GetTick();
+    return 0;
 }
 
 /**
@@ -121,9 +122,12 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
     // 使用校准后的Gz值进行积分
     currentYaw += gz_calibrated * dt;
     DataStruct->YawAngle = currentYaw;
+    uint8_t dummy;
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
+
 }
 
-double MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) {
+void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) {
 
     uint8_t Rec_Data[14];
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
@@ -135,7 +139,9 @@ double MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) {
     // 使用校准后的Gz值进行积分
     currentYaw += gz_calibrated * dt;
     DataStruct->YawAngle = currentYaw;
-    return currentYaw;
+    uint8_t dummy;
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
+
 }
 
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt)

@@ -55,7 +55,7 @@ LineWalkingState_t LineWalking_Data; // 定义一个LineWalking数据结构体�
 
 /* USER CODE BEGIN PV */
 // volatile 代表变量可能会被中断或其他线程修改，防止编译器优化
-
+extern volatile uint8_t mpu6050_data_ready_flag = 0;
 // volatile PID_Controller motor_pids[4];
 
 uint8_t RxBuff[1]; //进入中断接收数据的数组
@@ -83,6 +83,13 @@ void Uart_JudgeDataType(char *Udata) {
     } else if (strncmp(Udata, "$Battery:", 9) == 0) {
         MDrv_ProcessVol(Udata + 9);
     }
+}
+void HAL_GPIO_EXTI_Callback(uint16_t pin)
+{
+    if (pin == GPIO_PIN_9) {
+        mpu6050_data_ready_flag = 1;
+    }/* PB9 – MPU INT */
+
 }
 
 void OLED_Debug(char mode,uint8_t showtype) {
@@ -186,8 +193,13 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
-        OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
-        MDrv_GoSpeed(1,200);
+        if (mpu6050_data_ready_flag) {
+            mpu6050_data_ready_flag = 0;
+            MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
+            OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
+        }
+
+
         // LineWalking(&LineWalking_Data); // 处理 LineWalking 数据`
     }
 

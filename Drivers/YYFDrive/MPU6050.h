@@ -1,84 +1,54 @@
 #ifndef MPU6050_H_
 #define MPU6050_H_
 
-#include "main.h"
-
-// 根据您在CubeMX中的配置，修改为正确的I2C句柄
+#include "main.h"                     /* 包含 hi2c1 定义 */
 extern I2C_HandleTypeDef hi2c1;
 
-// MPU6050 的 I2C 地址
-#define MPU6050_ADDR 0xD0
+/* ───── I²C 地址 (AD0=LOW) ───── */
+#define MPU6050_ADDR        0xD0      /* 0x68 << 1 */
 
-// MPU6050 内部寄存器地址
+/* ───── 寄存器地址 ───── */
 #define WHO_AM_I_REG        0x75
 #define PWR_MGMT_1_REG      0x6B
 #define SMPLRT_DIV_REG      0x19
+#define CONFIG_REG          0x1A
 #define ACCEL_CONFIG_REG    0x1C
-#define ACCEL_XOUT_H_REG    0x3B
-#define TEMP_OUT_H_REG      0x41
 #define GYRO_CONFIG_REG     0x1B
+#define INT_PIN_CFG_REG     0x37
+#define INT_ENABLE_REG      0x38
+#define INT_STATUS_REG      0x3A
+#define ACCEL_XOUT_H_REG    0x3B
 #define GYRO_XOUT_H_REG     0x43
 
-// MPU6050 数据结构体
-typedef struct
-{
-    // --- 原始数据 ---
-    int16_t Accel_X_RAW;
-    int16_t Accel_Y_RAW;
-    int16_t Accel_Z_RAW;
+/* ───── 物理比例常数 (±2 g, ±250 °/s) ───── */
+#define ACCEL_SENSITIVITY   16384.0f
+#define GYRO_SENSITIVITY    131.0f
+#define RAD_TO_DEG          57.295779513
 
-    int16_t Gyro_X_RAW;
-    int16_t Gyro_Y_RAW;
-    int16_t Gyro_Z_RAW;
+/* ───── 外部标志：PB9 INT 置 1 ───── */
+extern volatile uint8_t mpu_data_ready;
 
-    // --- 经过转换的实际物理量 ---
-    float Ax, Ay, Az;
-    float Gx, Gy, Gz;
-
-    float Temperature;
-
-    // --- 滤波/计算后的角度 ---
-    double KalmanAngleX;
-    double KalmanAngleY;
-    double YawAngle;
-
+/* ───── 数据结构 ───── */
+typedef struct {
+    int16_t Accel_X_RAW, Accel_Y_RAW, Accel_Z_RAW;
+    int16_t Gyro_X_RAW , Gyro_Y_RAW , Gyro_Z_RAW;
+    float   Ax, Ay, Az;
+    float   Gx, Gy, Gz;
+    float   Temperature;
+    double  KalmanAngleX, KalmanAngleY;
+    double  YawAngle;
 } MPU6050_Data_t;
 
-// 卡尔曼滤波器结构体
+/* 卡尔曼结构 */
 typedef struct {
-    double Q_angle;
-    double Q_bias;
-    double R_measure;
-    double angle;
-    double bias;
+    double Q_angle, Q_bias, R_measure;
+    double angle, bias;
     double P[2][2];
 } Kalman_t;
 
-
-// --- 函数声明 ---
-
-/**
- * @brief 初始化 MPU6050 传感器
- * @retval 0: 初始化成功, 1: 失败
- */
+/* ───── API ───── */
 uint8_t MPU6050_Init(void);
-
-/**
- * @brief 校准陀螺仪。请在设备静止时调用此函数！
- */
-void MPU6050_Calibrate_Gyro(void);
-
-/**
- * @brief 读取所有传感器数据，并进行滤波和角度计算
- * @param DataStruct: 指向 MPU6050_Data_t 结构体的指针
- */
-void MPU6050_Read_All(MPU6050_Data_t *DataStruct);
-
-/**
- * @brief 获取当前的偏航角（Yaw Angle）
- * @param DataStruct: 指向 MPU6050_Data_t 结构体的指针
- * @retval 当前偏航角（单位：度）
- */
-double MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct);
-
-#endif /* MPU6050_H_ */
+void    MPU6050_Calibrate_Gyro(void);
+void    MPU6050_Read_All(MPU6050_Data_t *data);
+void    MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct);
+#endif
