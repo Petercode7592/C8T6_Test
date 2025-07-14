@@ -75,16 +75,11 @@ void Bluetooth_ParseData(void) {
 }
 
 HAL_StatusTypeDef Bluetooth_SendData(uint8_t *pData, uint16_t length) {
-    return HAL_UART_Transmit(Bluetooth_huart, pData, length, HAL_MAX_DELAY);
+    return HAL_UART_Transmit(Bluetooth_huart, pData, length, Uart_MaxWait);
 }
 
 HAL_StatusTypeDef Bluetooth_SendString(const char *str) {
-    return HAL_UART_Transmit(Bluetooth_huart, (uint8_t*)str, strlen(str), HAL_MAX_DELAY);
+    return HAL_UART_Transmit(Bluetooth_huart, (uint8_t*)str, strlen(str), Uart_MaxWait);
 }
 
-void Bluetooth_ReportData(float LVx, float RVx, float ACx, float GYx, float CSBx, float VIx) {
-    char buffer[64];
-    snprintf(buffer, sizeof(buffer), "$%.2f, %.2f, %.2f, GYx:%.2f, CSBx:%.2f, VIx:%.2f#\r\n",
-             LVx, RVx, ACx, GYx, CSBx, VIx);
-    Bluetooth_SendString(buffer);
-}
+

@@ -21,5 +21,5 @@ extern volatile CarState_e Bluetooth_CarState;
 // 函数声明
 void Bluetooth_Init(void);
 void Bluetooth_ParseData(void);
-void Bluetooth_ReportData(float LVx, float RVx, float ACx, float GYx, float CSBx, float VIx);
+
 #endif /* __BLUETOOTH_H */
