@@ -16,9 +16,9 @@
 float mall[4] = {0};
 int mtep[4] = {0};
 
-float V[4];
+float V[4] = {0}; // 速度数组
 int32_t Vstd[4]; // 标准速度
-float Voltage;
+float Voltage = 0.0f; // 电池电压
 
 void MDrv_ReadVol(char *charArray) {
     // 接收放在中断内
@@ -157,7 +157,7 @@ HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall,  uint8_t mtep, uint8_t mspd) {
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
-
+// bug
 void MDrv_ProcessMALL(char *data) {
     // 处理 $MALL 数据 代表轮子转动的总编码器数据
     // 例如解析数据并存储到相应的变量中
@@ -165,6 +165,7 @@ void MDrv_ProcessMALL(char *data) {
     sscanf(data, "%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
 }
 
+// bug
 void MDrv_ProcessMTEP(char *data) {
     // 处理 $MTEP 数据 代表轮子转动的实时转动编码器数据 10ms
     // 例如解析数据并存储到相应的变量中
@@ -172,6 +173,10 @@ void MDrv_ProcessMTEP(char *data) {
     sscanf(data, "%d,%d,%d,%d", &mtep[0], &mtep[1], &mtep[2], &mtep[3]);
 }
 
+/** @brief 处理 $MSPD 数据
+  * @param data 包含速度数据的字符串
+  * @note 该函数会解析数据并存储到全局变量 V 数组中，代表当前小车实时速度
+  */
 void MDrv_ProcessMSPD(char *data) {
     // 处理 $MSPD 数据 代表轮子转动的实时速度数据
     // 例如解析数据并存储到相应的变量中
@@ -206,30 +211,6 @@ void MDrv_ProcessMSPD(char *data) {
         // 跳过逗号（如果有）
         if (*ptr == ',') ptr++;
     }
-
-    // 2. 准备一个数组来存放PID计算出的新速度
-    // int32_t NewSpeed[4];
-
-    // 3. 调用PID模块来计算新速度
-    //    我们将期望值(Vstd)和实际值(V)传递给它，它会把结果填入NewSpeed
-    // PID_Run_All_Motors(Vstd, V, NewSpeed);
-
-    // 4. 使用计算出的新速度去设置电机，完成闭环
-    // MDrv_SetSpeed(NewSpeed[0], NewSpeed[1], NewSpeed[2], NewSpeed[3]);
-
-    // 这里的函数逻辑是错误的，不能通过比例的这种方式来修正速度，而是应该要引入闭环控制 PID ——6050
-    // int i = 0 , needUpdate = 0;
-    // for (i = 0; i < 4; i++) {
-    //     // 将速度转换为绝对值
-    //     if (Vstd[i] != 0 && fabsf((float)Vstd[i]-V[i]) > 5.0f && fabsf((float)Vstd[i]- V[i]) < 10.0f) {
-    //         needUpdate = 1; // 如果速度变化超过，标记需要更新
-    //         V[i] = (float)Vstd[i] * (float)Vstd[i] / V[i];
-    //     }
-    // }
-    // // 如果速度变化超过阈值，更新V数组
-    //   // memcpy(V, mspd, sizeof(V));
-    // if (needUpdate)
-    //     MDrv_SetSpeed(V[0], V[1], V[2], V[3]); // 更新电机速度
 }
 
 void MDrv_ProcessVol(char *data) {
