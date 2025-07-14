@@ -20,7 +20,6 @@
 #include "main.h"
 #include "dma.h"
 #include "i2c.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -118,16 +117,6 @@ void OLED_Debug(char mode,uint8_t showtype) {
     }
 }
 
-// 定时器20ms回调函数
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    if (htim->Instance == TIM2) {
-        MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取偏航角
-        // MPU6050_Read_All(&MPU6050_Data); // 读取MPU6050数据(Debug)
-        Mdrv_ReadVol(); // 读取电池电压
-        // GetLineWalking(&LineWalking_Data);
-        // Bluetooth_ReportData(V[0], V[2], MPU6050_Data.Ax, MPU6050_Data.Gx, 0, Voltage);
-    }
-}
 
 
 // 空闲中断+DMA 这里不要听信代码建议加 const
@@ -177,7 +166,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   MX_I2C2_Init();
-  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
     MDrv_Init(); // 初始化驱动板
     OLED_Init(&hi2c2);
@@ -192,7 +180,6 @@ int main(void)
 
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
-    HAL_TIM_Base_Start_IT(&htim2); // 50ms启动定时器中断
 
   /* USER CODE END 2 */
 
