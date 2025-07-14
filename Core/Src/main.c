@@ -33,6 +33,7 @@
 #include "bluetooth.h"
 #include "LineWalking.h"
 #include "Moto.h"
+#include "app_motion.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -85,10 +86,41 @@ void Uart_JudgeDataType(char *Udata) {
     }
 }
 
-// 定时器50ms回调函数
+void OLED_Debug(char mode,uint8_t showtype) {
+    if (mode == 'N') {
+        if (showtype == 0) {
+            OLED_ShowString(1, 1, "6050&R", 8);
+            OLED_ShowString(45,1, "V", 8);
+            OLED_ShowString(115,7,"V",8);
+        } else if (showtype == 1) {
+            OLED_ShowFloat(1, 2, MPU6050_Data.Gz, 3, 2, 8);
+            OLED_ShowFloat(1, 3, MPU6050_Data.YawAngle, 3, 2, 8);
+            OLED_ShowFloat(40, 2, V[0], 3, 2, 8);
+            OLED_ShowFloat(40, 3, V[1], 3, 2, 8);
+            OLED_ShowFloat(40, 4, V[2], 3, 2, 8);
+            OLED_ShowFloat(40, 5, V[3], 3, 2, 8);
+            OLED_ShowFloat(80, 7, Voltage, 1, 2, 8);
+        }
+    }
+    else if (mode == 'L') {
+        // OLED 显示 LineWalking 数据
+        if (showtype == 0) {
+            OLED_ShowString(1,7, "LineWalking", 8);
+            OLED_ShowString(1, 1, "L2 L1 R1 R2", 8);
+        }
+        else if (showtype == 1) {
+            // 显示 LineWalking 数据
+            OLED_ShowNum(1,2,LineWalking_Data.Left2, 1,8);
+            OLED_ShowNum(18,2,LineWalking_Data.Left1, 1,8);
+            OLED_ShowNum(36,2,LineWalking_Data.Right1, 1,8);
+            OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
+        }
+    }
+}
+
+// 定时器20ms回调函数
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM2) {
-        // 每20ms执行一次
         MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取偏航角
         // MPU6050_Read_All(&MPU6050_Data); // 读取MPU6050数据(Debug)
         Mdrv_ReadVol(); // 读取电池电压
@@ -106,51 +138,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
         Uart_JudgeDataType(DataBuff); // [Debug 删除调速函数]处理接收到的数据
         // HAL_UART_Transmit(&UMUART_Cfg, DataBuff, Size, Uart_MaxWait); // Debug【回传】
         HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 继续接收字节
-    }
-}
-
-
-void OLED_Debug(char mode,uint8_t showtype) {
-    if (mode == 'N') {
-        if (showtype == 0) {
-            OLED_ShowString(1, 1, "6050&R", 8);
-            OLED_ShowString(45,1, "V", 8);
-            OLED_ShowString(90,1,"Rot",8);
-            OLED_ShowString(115,7,"V",8);
-        } else if (showtype == 1) {
-            // OLED 显示 MPU6050 数据 和更新电压数据
-            // OLED_ShowFloat(1, 2, MPU6050_Data.Ax, 3, 2, 8);
-            // OLED_ShowFloat(1, 3, MPU6050_Data.Ay, 3, 2, 8);
-            // OLED_ShowFloat(1, 4, MPU6050_Data.Az, 3, 2, 8);
-            // OLED_ShowFloat(1, 5, MPU6050_Data.Gx, 3, 2, 8);
-            // OLED_ShowFloat(1, 6, MPU6050_Data.Gy, 3, 2, 8);
-            OLED_ShowFloat(1, 2, MPU6050_Data.Gz, 3, 2, 8);
-            OLED_ShowFloat(1, 3,MPU6050_Data.YawAngle, 3, 2, 8);
-            OLED_ShowFloat(40, 2, V[0], 3, 2, 8);
-            OLED_ShowFloat(40, 3, V[1], 3, 2, 8);
-            OLED_ShowFloat(40, 4, V[2], 3, 2, 8);
-            OLED_ShowFloat(40, 5, V[3], 3, 2, 8);
-            OLED_ShowFloat(80, 7, Voltage, 1, 2, 8);
-            // OLED_ShowFloat(85, 2,MPU6050_Data.KalmanAngleX, 3, 2, 8);
-            // OLED_ShowFloat(85, 3,MPU6050_Data.KalmanAngleY, 3, 2, 8);
-
-            // OLED_ShowFloat(90, 7, MPU6050_Data.Temperature, 3, 2, 8);
-            // 不是哥们开着23度空调说我们室内30度吗？哈哈
-        }
-    }
-    else if (mode == 'L') {
-        // OLED 显示 LineWalking 数据
-        if (showtype == 0) {
-            OLED_ShowString(1,7, "LineWalking", 8);
-            OLED_ShowString(1, 1, "L2 L1 R1 R2", 8);
-        }
-        else if (showtype == 1) {
-            // 显示 LineWalking 数据
-            OLED_ShowNum(1,2,LineWalking_Data.Left2, 1,8);
-            OLED_ShowNum(18,2,LineWalking_Data.Left1, 1,8);
-            OLED_ShowNum(36,2,LineWalking_Data.Right1, 1,8);
-            OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
-        }
     }
 }
 
@@ -194,18 +181,18 @@ int main(void)
   /* USER CODE BEGIN 2 */
     MDrv_Init(); // 初始化驱动板
     OLED_Init(&hi2c2);
-    HAL_Delay(1000);
-
-    Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
-    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
-    HAL_TIM_Base_Start_IT(&htim2); // 50ms启动定时器中断
-
     MPU6050_Init();
+    HAL_Delay(750);
+
     OLED_ShowString(1,1, "MPU6050 Init....", 8);
     MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
     OLED_Clear();
     HAL_Delay(200);
     OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
+
+    Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
+    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
+    HAL_TIM_Base_Start_IT(&htim2); // 50ms启动定时器中断
 
   /* USER CODE END 2 */
 
