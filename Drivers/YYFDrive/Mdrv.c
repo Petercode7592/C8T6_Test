@@ -269,42 +269,20 @@ void MDrv_Init() {
     // P:1.9,I:0.2,D:0.8
     // HAL_Delay(90);
     MDrv_SetMtype(2); // 设置为310电机
-    HAL_Delay(90);
+    HAL_Delay(100);
     Mdrv_SetMline(13); // 设置电机的相位线
-    HAL_Delay(90);
+    HAL_Delay(70);
     Mdrv_SetMphase(20); // 设置电机的减速比
-    HAL_Delay(90);
+    HAL_Delay(95);
     MDrv_SetWdiameter(48); // 设置车轮直径
-    HAL_Delay(90);
+    HAL_Delay(100);
     MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
     HAL_Delay(90);
     MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
     // MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
-    HAL_Delay(90);
+    HAL_Delay(95);
+    Mdrv_ReadVol();
+    HAL_Delay(95);
+    Mdrv_UploadData(0, 0, 1); // 上传数据，mall, mtep, mspd都上传
+    HAL_Delay(95);
 }
-
-// 可以使用DMA完成
-// char* MDrv_ReadFlash(char *charArray) {
-//     // 发送指令
-//     HAL_StatusTypeDef status = HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$read_flash#", 12, Uart_MaxWait);
-//     if (status != HAL_OK)
-//       return NULL;
-//
-//     uint32_t index = 0;
-//     char ch = 0;
-//
-//     while (index < 63)  // 预留1字节给 '\0'
-//     {
-//       status = UART_ReceiveOnebit(1, (uint8_t*)&ch);
-//       if (status != HAL_OK)
-//         return NULL;  // 接收失败或超时，返回NULL
-//
-//       charArray[index++] = ch;
-//
-//       if (ch == '#')  // 遇到结束符，结束接收
-//         break;
-//     }
-//
-//     charArray[index] = '\0';  // 字符串结束符
-//     return charArray;
-// }

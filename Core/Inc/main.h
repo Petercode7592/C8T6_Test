@@ -67,12 +67,16 @@ void Error_Handler(void);
 #define OLED_SDA_GPIO_Port GPIOB
 #define Track_L2X1_Pin GPIO_PIN_12
 #define Track_L2X1_GPIO_Port GPIOB
+#define Track_L2X1_EXTI_IRQn EXTI15_10_IRQn
 #define Track_L1X2_Pin GPIO_PIN_13
 #define Track_L1X2_GPIO_Port GPIOB
+#define Track_L1X2_EXTI_IRQn EXTI15_10_IRQn
 #define Track_R1X3_Pin GPIO_PIN_14
 #define Track_R1X3_GPIO_Port GPIOB
+#define Track_R1X3_EXTI_IRQn EXTI15_10_IRQn
 #define Track_R2X4_Pin GPIO_PIN_15
 #define Track_R2X4_GPIO_Port GPIOB
+#define Track_R2X4_EXTI_IRQn EXTI15_10_IRQn
 #define PCUSART_TX_Pin GPIO_PIN_9
 #define PCUSART_TX_GPIO_Port GPIOA
 #define PCUSART_RX_Pin GPIO_PIN_10

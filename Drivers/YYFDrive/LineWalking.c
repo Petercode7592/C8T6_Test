@@ -10,11 +10,13 @@
 #define High GPIO_PIN_SET
 #define Low GPIO_PIN_RESET
 
-void GetLineWalking(LineWalkingState_t *state) {
-    state->Left1 = HAL_GPIO_ReadPin(Track_L1X2_GPIO_Port, Track_L1X2_Pin);
-    state->Left2 = HAL_GPIO_ReadPin(Track_L2X1_GPIO_Port, Track_L2X1_Pin);
-    state->Right1 = HAL_GPIO_ReadPin(Track_R1X3_GPIO_Port, Track_R1X3_Pin);
-    state->Right2 = HAL_GPIO_ReadPin(Track_R2X4_GPIO_Port, Track_R2X4_Pin);
+uint8_t GetLineWalking() {
+    uint8_t state = 0;
+    if (HAL_GPIO_ReadPin(Track_L2X1_GPIO_Port, Track_L2X1_Pin) == High) state |= (1 << 3); // L2
+    if (HAL_GPIO_ReadPin(Track_L1X2_GPIO_Port, Track_L1X2_Pin) == High) state |= (1 << 2); // L1
+    if (HAL_GPIO_ReadPin(Track_R1X3_GPIO_Port, Track_R1X3_Pin) == High) state |= (1 << 1); // R1
+    if (HAL_GPIO_ReadPin(Track_R2X4_GPIO_Port, Track_R2X4_Pin) == High) state |= (1 << 0); // R2
+    return state;
 }
 
 /* 车体几何参数（单位 mm） */
@@ -59,56 +61,81 @@ static void setCurveSpeed(float R)
 }
 
 
-void LineWalking(LineWalkingState_t *state) {
-    GPIO_PinState L1 = state->Left1;
-    GPIO_PinState L2 = state->Left2;
-    GPIO_PinState R1 = state->Right1;
-    GPIO_PinState R2 = state->Right2;
-
-    uint8_t delay = 10; // 默认延时
-
+void LineWalking(uint8_t state, int16_t speed) {
     // 首先 Low 代表黑线 High 代表白线
     // L2   L1   R1   R2
+    // Notice: 已知1.7mm的间距黑胶不会有 0011 和 1100 的情况 行进路线放置
+    switch (state)
+    {
+        case 0b0000:  // 全部低
+            // 压到黑线了，全速185度
+            Motion_SpinStart(185.0f, (int16_t)((float)speed * 1.2f));
+            break;
+        case 0b1111:
+            // 冲出去自己调节
+            Motion_Backward(speed);
+            break;
 
-    // —— 左大弯 —— (0111)
-    if (L2 == Low && L1 == High && R1 == High && R2 == High) {
-        // 让左边反转、右边前进 → 用大偏移量
-        Motion_SpinStart(30.0f,100);
-        delay = 80;
+        case 0b0111:
+            Motion_SpinStart(-25.0f,  speed);// 左偏大，需向又拉回
+            break;
+        case 0b1110:
+            Motion_SpinStart(25.0f,  speed); // 右偏大，需向左拉回
+            break;
+
+        case 0b0001:
+            // 左直角-> 转弯进入 1000
+            // L2 + L1，高偏左，事实只要2度调节
+            Motion_SpinStart(15.0f, (int16_t)((float)speed * 0.75f));  // 左直角
+            break;
+        case 0b1000:  // 右直角
+            // 右直角 -> 转弯进入 0001
+            Motion_SpinStart(-15.0f,  speed);
+            break;
+
+        /* impossible
+        case 0b0010:
+            break;
+        case 0b0100:
+            break;
+        */
+
+        case 0b0011: // 标准
+            // 只能是左直角 -> 转弯进入 0001
+            // 事实上这个的分布是  L2         L1  R1      R2
+            Motion_SpinStart(-5.0f, (int16_t)((float)speed * 0.75f)); // 右直角
+            break;
+        case 0b1100:
+            // 只能是右直角 -> 转弯进入 1000
+            //事实只要2度调节
+            Motion_SpinStart(5.0f, (int16_t)((float)speed * 0.75f));  // 左直角
+            break;
+
+        /* impossible
+        case 0b0101:
+            // L1 + R2
+            break;
+        case 0b1010:
+            // L2 + R1
+            break;
+
+        case 0b0110:
+            break;
+        */
+        case 0b1001:
+            //  I like it
+            break;
+
+        case 0b1011:
+            // 右偏大，需向左拉回 -> 1001
+            Motion_SpinStart(2.0f, (int16_t)((float)speed * 0.75f)); // 右偏大，需向左拉回
+            break;
+        case 0b1101:
+            // 左偏大，需向右拉回 -> 1001
+            Motion_SpinStart(-2.0f, (int16_t)((float)speed * 0.75f)); // 右偏大，需向左拉回
+            break;
+
+        default:
+            break;
     }
-    // —— 左直角 —— (0011)
-    else if (L2 == Low && L1 == Low && R1 == High && R2 == High) {
-        setCurveSpeed(100.0f); // 左直角
-        delay = 40;
-    }
-    // —— 右直角 —— (1100)
-    else if (L2 == High && L1 == High && R1 == Low && R2 == Low) {
-        setCurveSpeed(-100.0f); // 右直角
-        delay = 40;
-    }
-    // —— 右大弯 —— (1110)
-    else if (L2 == High && L1 == High && R1 == High && R2 == Low) {
-        setCurveSpeed(-150.0f); // 右大弯
-        delay = 80;
-    }
-    // —— 左最外侧微调（小弯）—— (1011) 中间微调左
-    else if (L2 == High && L1 == Low && R1 == High && R2 == High) {
-        setCurveSpeed(300.0f); // 中等偏左
-        delay = 10;
-    }
-    // —— 右最外侧微调（小弯）—— (1101) 中间微调右
-    else if (L2 == High && L1 == High && R1 == Low && R2 == High) {
-        setCurveSpeed(-300.0f); // 中等偏右
-        delay = 10;
-    }
-    // —— 居中直行 —— (L1==Low && R1==Low)
-    else if (L1 == Low && R1 == Low) {
-        Motion_Forward(100);
-    }
-    // —— 其它断线 —— 停车
-    else {
-        MDrv_SetSpeed(0, 0, 0, 0);
-        return;
-    }
-    HAL_Delay(delay);
 }

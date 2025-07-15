@@ -38,7 +38,6 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
-LineWalkingState_t LineWalking_Data; // 定义一个LineWalking数据结构体实例
 DelayTimer_t timer;
 /* USER CODE END PTD */
 
@@ -133,10 +132,10 @@ void OLED_Debug(char mode,uint8_t showtype) {
         }
         else if (showtype == 1) {
             // 显示 LineWalking 数据
-            OLED_ShowNum(1,2,LineWalking_Data.Left2, 1,8);
-            OLED_ShowNum(18,2,LineWalking_Data.Left1, 1,8);
-            OLED_ShowNum(36,2,LineWalking_Data.Right1, 1,8);
-            OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
+            // OLED_ShowNum(1,2,LineWalking_Data.Left2, 1,8);
+            // OLED_ShowNum(18,2,LineWalking_Data.Left1, 1,8);
+            // OLED_ShowNum(36,2,LineWalking_Data.Right1, 1,8);
+            // OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
         }
     }
 }
@@ -183,14 +182,12 @@ int main(void)
     MPU6050_Init();
     HAL_Delay(750);
 
-    // OLED_ShowString(1,1, "MPU6050 Init....", 8);
-    // MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
-    // OLED_Clear();
-    // HAL_Delay(200);
-    HAL_StatusTypeDef ret = HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
+    OLED_ShowString(1,1, "MPU6050 Init....", 8);
+    MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
+    OLED_Clear();
+    HAL_Delay(200);
+    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
     OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
-
-    Mdrv_ReadVol();
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
 
 
@@ -204,21 +201,12 @@ int main(void)
             MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
         }
         OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
-        LineWalking(&LineWalking_Data);
-        // // Step 1: 后退2秒
-        // Motion_Backward(100);
-        // Delay_Start(&timer);
-        // while (!Delay_Expired(&timer, 2000)) {
-        //     // 此处不要重启 Delay_Start
-        // }
-        //
-        // // Step 2: 停止 + 旋转
-        // Motion_Stop();
-        // Motion_SpinStart(90, 100);
-        // Delay_Start(&timer);
-        // while (!Delay_Expired(&timer, 1000)) {
-        //     Motion_SpinUpdate(MPU6050_Data.YawAngle);
-        // }
+        LineWalking(GetLineWalking(), 200); // 传感器数据处理
+        // Motion_SpinUpdate();
+        while (Delay_Expired(&timer,2000) == 0) {
+            // 等待转向完成
+            Motion_SpinUpdate(MPU6050_Data.YawAngle);
+        }
     }
 
     /* USER CODE END WHILE */
