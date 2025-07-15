@@ -5,6 +5,7 @@
 #include "main.h"
 #include "Mdrv.h"
 #include "math.h"
+#include "app_motion.h"
 
 #define High GPIO_PIN_SET
 #define Low GPIO_PIN_RESET
@@ -72,7 +73,7 @@ void LineWalking(LineWalkingState_t *state) {
     // —— 左大弯 —— (0111)
     if (L2 == Low && L1 == High && R1 == High && R2 == High) {
         // 让左边反转、右边前进 → 用大偏移量
-        setCurveSpeed(150.0f);
+        Motion_SpinStart(30.0f,100);
         delay = 80;
     }
     // —— 左直角 —— (0011)
@@ -102,7 +103,7 @@ void LineWalking(LineWalkingState_t *state) {
     }
     // —— 居中直行 —— (L1==Low && R1==Low)
     else if (L1 == Low && R1 == Low) {
-        ;
+        Motion_Forward(100);
     }
     // —— 其它断线 —— 停车
     else {

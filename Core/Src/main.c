@@ -29,16 +29,17 @@
 #include "string.h"
 #include "MPU6050.h" // 包含MPU6050模块
 #include "oled.h"
-#include "bluetooth.h"
 #include "LineWalking.h"
 #include "Moto.h"
 #include "app_motion.h"
+#include "delay_util.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 LineWalkingState_t LineWalking_Data; // 定义一个LineWalking数据结构体实例
+DelayTimer_t timer;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -74,6 +75,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void Uart_JudgeDataType(char *Udata) {
+    HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *)Udata, strlen(Udata), Uart_MaxWait);
     if (strncmp(Udata, "$MALL:", 6) == 0) {
         MDrv_ProcessMALL(Udata + 6);
     } else if (strncmp(Udata, "$MTEP:", 6) == 0) {
@@ -87,10 +89,25 @@ void Uart_JudgeDataType(char *Udata) {
 void HAL_GPIO_EXTI_Callback(uint16_t pin)
 {
     if (pin == GPIO_PIN_9) {
+
         mpu6050_data_ready_flag = 1;
     }/* PB9 – MPU INT */
 
 }
+
+
+// 空闲中断+DMA 这里不要听信代码建议加 const
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+    // 这个回调函数会在接收到数据时被调用
+
+    if (huart->Instance == UMUART_Cfg.Instance) {
+        DataBuff[Size] = '\0'; // 确保字符串结束
+        Uart_JudgeDataType(DataBuff); // [Debug 删除调速函数]处理接收到的数据
+        // HAL_UART_Transmit(&UMUART_Cfg, DataBuff, Size, Uart_MaxWait); // Debug【回传】
+        HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 继续接收字节
+    }
+}
+
 
 void OLED_Debug(char mode,uint8_t showtype) {
     if (mode == 'N') {
@@ -121,19 +138,6 @@ void OLED_Debug(char mode,uint8_t showtype) {
             OLED_ShowNum(36,2,LineWalking_Data.Right1, 1,8);
             OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
         }
-    }
-}
-
-
-
-// 空闲中断+DMA 这里不要听信代码建议加 const
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-    // 这个回调函数会在接收到数据时被调用
-    if (huart->Instance == UMUART_Cfg.Instance) {
-        DataBuff[Size] = '\0'; // 确保字符串结束
-        Uart_JudgeDataType(DataBuff); // [Debug 删除调速函数]处理接收到的数据
-        // HAL_UART_Transmit(&UMUART_Cfg, DataBuff, Size, Uart_MaxWait); // Debug【回传】
-        HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 继续接收字节
     }
 }
 
@@ -179,14 +183,16 @@ int main(void)
     MPU6050_Init();
     HAL_Delay(750);
 
-    OLED_ShowString(1,1, "MPU6050 Init....", 8);
-    MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
-    OLED_Clear();
-    HAL_Delay(200);
+    // OLED_ShowString(1,1, "MPU6050 Init....", 8);
+    // MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
+    // OLED_Clear();
+    // HAL_Delay(200);
+    HAL_StatusTypeDef ret = HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
     OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
 
+    Mdrv_ReadVol();
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
-    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收单个字节
+
 
   /* USER CODE END 2 */
 
@@ -196,11 +202,23 @@ int main(void)
         if (mpu6050_data_ready_flag) {
             mpu6050_data_ready_flag = 0;
             MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
-            OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
         }
-
-
-        // LineWalking(&LineWalking_Data); // 处理 LineWalking 数据`
+        OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
+        LineWalking(&LineWalking_Data);
+        // // Step 1: 后退2秒
+        // Motion_Backward(100);
+        // Delay_Start(&timer);
+        // while (!Delay_Expired(&timer, 2000)) {
+        //     // 此处不要重启 Delay_Start
+        // }
+        //
+        // // Step 2: 停止 + 旋转
+        // Motion_Stop();
+        // Motion_SpinStart(90, 100);
+        // Delay_Start(&timer);
+        // while (!Delay_Expired(&timer, 1000)) {
+        //     Motion_SpinUpdate(MPU6050_Data.YawAngle);
+        // }
     }
 
     /* USER CODE END WHILE */
