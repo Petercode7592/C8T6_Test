@@ -60,7 +60,6 @@ extern volatile uint8_t mpu6050_data_ready_flag = 0;
 extern volatile uint8_t linewalking_data_ready_flag = 0;
 // volatile PID_Controller motor_pids[4];
 
-uint8_t RxBuff[1]; //进入中断接收数据的数组
 uint8_t DataBuff[200]; //保存接收到的数据的数组
 int RxLine = 0; //接收到的数据长度
 
@@ -96,7 +95,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
     else if (pin == GPIO_PIN_12 || pin == GPIO_PIN_13 || pin == GPIO_PIN_14 || pin == GPIO_PIN_15) {
         // 处理 LineWalking 模块的中断
         LineWalking_Data = GetLineWalking();
-        LineWalking(LineWalking_Data, 0); // 传感器数据处理
+        linewalking_data_ready_flag = 1;
+        Motion_AbortSpin();  // 中断时不访问变量，直接取消旋转
     }
 }
 
@@ -135,10 +135,10 @@ void OLED_Debug(char mode, uint8_t showtype) {
             OLED_ShowString(1, 1, "L2 L1 R1 R2", 8);
         } else if (showtype == 1) {
             // 显示 LineWalking 数据
-            // OLED_ShowNum(1,2,LineWalking_Data.Left2, 1,8);
-            // OLED_ShowNum(18,2,LineWalking_Data.Left1, 1,8);
-            // OLED_ShowNum(36,2,LineWalking_Data.Right1, 1,8);
-            // OLED_ShowNum(54,2,LineWalking_Data.Right2, 1,8);
+            OLED_ShowNum(1,2,(LineWalking_Data >> 3) & 0x01, 1,8);
+            OLED_ShowNum(18,2,(LineWalking_Data >> 2) & 0x01, 1,8);
+            OLED_ShowNum(36,2,(LineWalking_Data >> 1) & 0x01, 1,8);
+            OLED_ShowNum(54,2,(LineWalking_Data >> 0) & 0x01, 1,8);
         }
     }
 }
@@ -188,7 +188,7 @@ int main(void) {
     OLED_Clear();
     HAL_Delay(200);
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
-    OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
+    OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
     /* USER CODE END 2 */
 
@@ -199,14 +199,14 @@ int main(void) {
             mpu6050_data_ready_flag = 0;
             MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
         }
-        OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
-
-
-        // Motion_SpinUpdate();
-        while (Delay_Expired(&timer, 2000) == 0) {
-            // 等待转向完成
-            Motion_SpinUpdate(MPU6050_Data.YawAngle);
+        OLED_Debug('L', 1); // OLED 显示 LineWalking 数据
+        if (linewalking_data_ready_flag) {
+            linewalking_data_ready_flag = 0;
+            LineWalking(LineWalking_Data, 100); // 传感器数据处理
         }
+        Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);
+        // Motion_SpinUpdate();
+        // while (Delay_Expired(&timer, 2000) == 0) {
     }
 
     /* USER CODE END WHILE */
