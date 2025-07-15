@@ -6,6 +6,8 @@
 #include "Mdrv.h"
 #include "math.h"
 #include "app_motion.h"
+#include "usart.h"
+#include "string.h" // strlen
 
 #define High GPIO_PIN_SET
 #define Low GPIO_PIN_RESET
@@ -65,11 +67,25 @@ void LineWalking(uint8_t state, int16_t speed) {
     // 首先 Low 代表黑线 High 代表白线
     // L2   L1   R1   R2
     // Notice: 已知1.7mm的间距黑胶不会有 0011 和 1100 的情况 行进路线放置
+    char txBuffer[64];
+
+    // 拆位：提取每一位的高低状态（1或0）
+    uint8_t L2 = (state >> 3) & 0x01;
+    uint8_t L1 = (state >> 2) & 0x01;
+    uint8_t R1 = (state >> 1) & 0x01;
+    uint8_t R2 = (state >> 0) & 0x01;
+
+    // 拼接字符串（可用 snprintf 更安全）
+    sprintf(txBuffer, "$LWK:L %d:%d R%d:%d#\r\n", L2, L1, R1, R2);
+    // 通过蓝牙发送（这里用 huart1 举例）
+    HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *)txBuffer, strlen(txBuffer), HAL_MAX_DELAY);
+
     switch (state)
     {
         case 0b0000:  // 全部低
             // 压到黑线了，全速185度
             Motion_SpinStart(185.0f, (int16_t)((float)speed * 1.2f));
+
             break;
         case 0b1111:
             // 冲出去自己调节
