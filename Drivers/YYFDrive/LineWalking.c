@@ -43,46 +43,45 @@ void LineWalking(uint8_t state, int16_t speed) {
     // 通过蓝牙发送
     HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *)txBuffer, strlen(txBuffer), HAL_MAX_DELAY);
 
-
     // 严格匹配原逻辑的优先级顺序（从强烈转向到微调，再到直行）
     if ((L1 == Low || R1 == Low) && R2 == Low) {
         // 右直角（强右偏）：右大弯
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Turn#\r\n", 20, HAL_MAX_DELAY);
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Turn#\r\n", 20, HAL_MAX_DELAY);
         Motion_SpinTaskStart(45.0f, speed);
     }
     else if (L2 == Low && (R1 == Low || L1 == Low)) {
         // 左直角（强左偏）：左大弯
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Turn#\r\n", 19, HAL_MAX_DELAY);
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Turn#\r\n", 19, HAL_MAX_DELAY);
         Motion_SpinTaskStart(-45.0f, speed);
     }
     else if (L2 == Low) {
         // 左最外侧感应器触发（轻微左偏）
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Slight#\r\n", 20, HAL_MAX_DELAY);
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Slight#\r\n", 20, HAL_MAX_DELAY);
         Motion_SpinTaskStart(-10.0f, speed);
     }
     else if (R2 == Low) {
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Slight#\r\n", 21, HAL_MAX_DELAY);
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Slight#\r\n", 21, HAL_MAX_DELAY);
         // 右最外侧感应器触发（轻微右偏）
         Motion_SpinTaskStart(10.0f, speed);
     }
     else if (L1 == Low && R1 == Low) {
         // 正常行进：直走
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Forward#\r\n", 16, HAL_MAX_DELAY);
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Forward#\r\n", 16, HAL_MAX_DELAY);
         Motion_Forward(speed);
     }
     else if (L1 == Low && R1 == High) {
         // 中央偏左（微调左）
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Adjust#\r\n", 20, HAL_MAX_DELAY);
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Adjust#\r\n", 20, HAL_MAX_DELAY);
         Motion_SpinTaskStart(-5.0f, speed);
     }
     else if (L1 == High && R1 == Low) {
         // 中央偏右（微调右）
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Adjust#\r\n", 21, HAL_MAX_DELAY);
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Adjust#\r\n", 21, HAL_MAX_DELAY);
         Motion_SpinTaskStart(5.0f, speed);
     }
     else {
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:OTHER/Backward#\r\n", 22, HAL_MAX_DELAY);
-        // 否则：没看到线，停止或后退
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:OTHER/Backward#\r\n", 22, HAL_MAX_DELAY);
+        // 否则：没看到线，停止或后退[bug]
         Motion_Backward(speed);
     }
 }

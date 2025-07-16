@@ -31,13 +31,11 @@
 #include "oled.h"
 #include "LineWalking.h"
 #include "motion_control.h"
-#include "delay_util.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
-DelayTimer_t timer;
 uint8_t LineWalking_Data;
 /* USER CODE END PTD */
 
@@ -75,7 +73,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void Uart_JudgeDataType(char *Udata) {
-    // HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *) Udata, strlen(Udata), Uart_MaxWait);
+    HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *) Udata, strlen(Udata), Uart_MaxWait);
     if (strncmp(Udata, "$MALL:", 6) == 0) {
         MDrv_ProcessMALL(Udata + 6);
     } else if (strncmp(Udata, "$MTEP:", 6) == 0) {
@@ -87,6 +85,11 @@ void Uart_JudgeDataType(char *Udata) {
     }
 }
 
+/**
+  * @brief GPIO中断回调函数
+  * @param pin: 中断引脚
+  * @retval None
+  */
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
     if (pin == GPIO_PIN_9) {
         mpu6050_data_ready_flag = 1;
@@ -99,8 +102,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
     }
 }
 
-
-// 空闲中断+DMA 这里不要听信代码建议加 const
+/**
+  * @brief UART接收完成回调函数
+  * @param huart: UART句柄
+  * @retval None
+  * @note 空闲中断+DMA 这里不要听信代码建议加 const
+  */
+//
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     // 这个回调函数会在接收到数据时被调用
     if (huart->Instance == UMUART_Cfg.Instance) {
@@ -188,7 +196,7 @@ int main(void) {
     HAL_Delay(200);
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
     OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题
-    Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
+    Mdrv_UploadData(1, 0, 1); // 上传MSPD到MCU
     /* USER CODE END 2 */
 
     /* Infinite loop */
@@ -201,11 +209,10 @@ int main(void) {
         OLED_Debug('L', 1); // OLED 显示 LineWalking 数据
         if (linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;
-            LineWalking(LineWalking_Data, 300); // 传感器数据处理
+            // LineWalking(LineWalking_Data, 300); // 传感器数据处理
         }
         Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);
-        // Motion_SpinUpdate();
-        // while (Delay_Expired(&timer, 2000) == 0) {
+        // while (Delay_Expired(&timer, 2000) == 0)  添加延时函数
     }
 
     /* USER CODE END WHILE */

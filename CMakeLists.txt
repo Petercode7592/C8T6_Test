@@ -52,8 +52,6 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/bluetooth.h
         Drivers/YYFDrive/motion_control.c
         Drivers/YYFDrive/motion_control.h
-        Core/Src/delay_util.c
-        Core/Src/delay_util.h
         Drivers/YYFDrive/Global.h
 )
 

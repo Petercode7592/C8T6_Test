@@ -16,9 +16,6 @@ static double currentYaw = 0.0;
 // 新增：用于存储陀螺仪XYZ三轴偏置的变量
 static float gx_bias=0, gy_bias=0, gz_bias=0;
 
-static double  yaw_acc = 0;
-
-
 // --- 私有函数声明 ---
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt);
 
@@ -127,8 +124,8 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
 
 }
 
-void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) {
-
+void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) \
+{
     uint8_t Rec_Data[14];
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
     DataStruct->Gyro_Z_RAW  = (int16_t)(Rec_Data[12] << 8 | Rec_Data[13]);
@@ -139,9 +136,9 @@ void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) {
     // 使用校准后的Gz值进行积分
     currentYaw += gz_calibrated * dt;
     DataStruct->YawAngle = currentYaw;
+
     uint8_t dummy;
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
-
 }
 
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt)

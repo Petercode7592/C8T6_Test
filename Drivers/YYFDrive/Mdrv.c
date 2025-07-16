@@ -14,7 +14,7 @@
  * M4 -> 右下电机（小车的右后轮）
 */
 float mall[4] = {0};
-int mtep[4] = {0};
+uint32_t mtep[4] = {0};
 
 float V[4] = {0}; // 速度数组
 int32_t Vstd[4]; // 标准速度
@@ -162,7 +162,7 @@ void MDrv_ProcessMALL(char *data) {
     // 处理 $MALL 数据 代表轮子转动的总编码器数据
     // 例如解析数据并存储到相应的变量中
     // 假设数据格式为 "$MAll:23427,23801,24543,24453#"
-    sscanf(data, "%f,%f,%f,%f", &mall[0], &mall[1], &mall[2], &mall[3]);
+    sscanf(data, "%d,%d,%d,%d", &mall[0], &mall[1], &mall[2], &mall[3]);
 }
 
 // bug
@@ -241,23 +241,6 @@ void Mdrv_ReadVol() {
 }
 
 /**
-  * @brief 设置电机速度(单位mm/s)
-  * @param mode 1: 正向速度, -1: 反向速度, 0: 停止
-  * @param Vm 电机速度(单位mm/s),内部判断需为正。
-  * @note 此函数会设置所有电机的速度，Vm为正时表示正向转动，负时表示反向转动，0时表示停止
-  */
-void MDrv_GoSpeed(int8_t mode, int32_t Vm) {
-    if (Vm >= 0) {
-        if (mode == 1)
-            MDrv_SetSpeed(Vm, Vm, Vm, Vm); // 设置所有电机速度
-        else if (mode == -1)
-            MDrv_SetSpeed(-1 * Vm, -1 * Vm, -1 * Vm, -1 * Vm); // 转置所有电机速度
-        else if (mode == 0)
-            MDrv_SetSpeed(0, 0, 0, 0); // 停止所有电机
-    }
-}
-
-/**
   * @brief (bug)初始化驱动板
   * @retval HAL_StatusTypeDef 返回状态
   * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时90ms,收到HAL_OK只代表发出去不代表已经MD收到
@@ -282,7 +265,5 @@ void MDrv_Init() {
     // MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
     HAL_Delay(95);
     Mdrv_ReadVol();
-    HAL_Delay(95);
-    Mdrv_UploadData(0, 0, 1); // 上传数据，mall, mtep, mspd都上传
     HAL_Delay(95);
 }

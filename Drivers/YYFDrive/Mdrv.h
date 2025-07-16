@@ -10,7 +10,7 @@
 #include "PID.h"
 
 extern float mall[4];
-extern int mtep[4];
+extern uint32_t mtep[4];
 
 extern float V[4];
 extern int32_t Vstd[4]; // 标准速度
@@ -35,8 +35,6 @@ void MDrv_ProcessMSPD(char *data);
 void MDrv_ProcessVol(char *data);
 
 void Mdrv_ReadVol();
-
-void MDrv_GoSpeed(int8_t mode, int32_t Vm);
 
 void MDrv_Init();
 
