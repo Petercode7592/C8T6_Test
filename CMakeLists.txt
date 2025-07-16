@@ -40,8 +40,6 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/Mdrv.c
         Drivers/YYFDrive/LineWalking.h
         Drivers/YYFDrive/LineWalking.c
-        Drivers/YYFDrive/Moto.c
-        Drivers/YYFDrive/Moto.h
         Drivers/YYFDrive/PID.c
         Drivers/YYFDrive/PID.h
         Drivers/YYFDrive/MPU6050.c
@@ -52,10 +50,11 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/oledfont.h
         Drivers/YYFDrive/bluetooth.c
         Drivers/YYFDrive/bluetooth.h
-        Drivers/YYFDrive/app_motion.c
-        Drivers/YYFDrive/app_motion.h
+        Drivers/YYFDrive/motion_control.c
+        Drivers/YYFDrive/motion_control.h
         Core/Src/delay_util.c
         Core/Src/delay_util.h
+        Drivers/YYFDrive/Global.h
 )
 
 # Add STM32CubeMX generated sources

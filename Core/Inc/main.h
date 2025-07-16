@@ -32,6 +32,7 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h" // 重定向 Printf
+#include "MPU6050.h" // 包含MPU6050模块
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

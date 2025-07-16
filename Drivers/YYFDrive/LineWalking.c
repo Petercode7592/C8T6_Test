@@ -5,7 +5,7 @@
 #include "main.h"
 #include "Mdrv.h"
 #include "math.h"
-#include "app_motion.h"
+#include "motion_control.h"
 #include "usart.h"
 #include "string.h" // strlen
 
@@ -65,6 +65,11 @@ void LineWalking(uint8_t state, int16_t speed) {
         // 右最外侧感应器触发（轻微右偏）
         Motion_SpinTaskStart(10.0f, speed);
     }
+    else if (L1 == Low && R1 == Low) {
+        // 正常行进：直走
+        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Forward#\r\n", 16, HAL_MAX_DELAY);
+        Motion_Forward(speed);
+    }
     else if (L1 == Low && R1 == High) {
         // 中央偏左（微调左）
         HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Adjust#\r\n", 20, HAL_MAX_DELAY);
@@ -74,11 +79,6 @@ void LineWalking(uint8_t state, int16_t speed) {
         // 中央偏右（微调右）
         HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Adjust#\r\n", 21, HAL_MAX_DELAY);
         Motion_SpinTaskStart(5.0f, speed);
-    }
-    else if (L1 == Low && R1 == Low) {
-        // 正常行进：直走
-        HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Forward#\r\n", 16, HAL_MAX_DELAY);
-        Motion_Forward(speed);
     }
     else {
         HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:OTHER/Backward#\r\n", 22, HAL_MAX_DELAY);
