@@ -54,7 +54,7 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 // volatile 代表变量可能会被中断或其他线程修改，防止编译器优化
 extern volatile uint8_t mpu6050_data_ready_flag = 0;
 extern volatile uint8_t linewalking_data_ready_flag = 1; // 让其先触发一次
-uint8_t LineWalking_Data = 0;
+uint8_t LineWalking_Data = 100; // 错误值判断
 // volatile PID_Controller motor_pids[4];
 
 uint8_t DataBuff[200]; //保存接收到的数据的数组
@@ -225,6 +225,9 @@ int main(void) {
         OLED_Debug('L', 1); // OLED 显示 LineWalking 数据
         if (linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;
+            if (LineWalking_Data == 100) {
+                LineWalking_Data = GetLineWalking(); // 保证初始上电获取正确数据
+            }
             LineWalking(LineWalking_Data, 200); // 传感器数据处理
         }
         Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);
