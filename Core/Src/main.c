@@ -95,7 +95,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
         // 处理 LineWalking 模块的中断
         LineWalking_Data = GetLineWalking();
         linewalking_data_ready_flag = 1;
-        Motion_AbortSpin();  // 中断时不访问变量，直接取消旋转
+        Motion_AbortSpin();  // 中断时设定取消旋转
     }
 }
 
@@ -201,7 +201,7 @@ int main(void) {
         OLED_Debug('L', 1); // OLED 显示 LineWalking 数据
         if (linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;
-            LineWalking(LineWalking_Data, 100); // 传感器数据处理
+            LineWalking(LineWalking_Data, 300); // 传感器数据处理
         }
         Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);
         // Motion_SpinUpdate();
