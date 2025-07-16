@@ -9,11 +9,11 @@
 #include "main.h"
 #include "PID.h"
 
-extern float mall[4];
-extern uint32_t mtep[4];
+extern uint32_t mall[4];
+extern uint16_t mtep[4];
 
-extern float V[4];
-extern int32_t Vstd[4]; // 标准速度
+extern float v[4];
+extern int32_t vstd[4]; // 标准速度
 extern float Voltage; // 电池电压
 
 void MDrv_ReadVol(char *charArray);
@@ -37,5 +37,9 @@ void MDrv_ProcessVol(char *data);
 void Mdrv_ReadVol();
 
 void MDrv_Init();
+
+uint32_t Mdrv_ReadMALL(int8_t MX);
+uint16_t Mdrv_ReadMTEP(int8_t MX);
+float Mdrv_Readspeed(int8_t MX);
 
 #endif //MDRV_H

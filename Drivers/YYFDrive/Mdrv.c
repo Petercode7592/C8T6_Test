@@ -13,11 +13,10 @@
  * M3 -> 右上电机（小车的右前轮）
  * M4 -> 右下电机（小车的右后轮）
 */
-float mall[4] = {0};
-uint32_t mtep[4] = {0};
-
-float V[4] = {0}; // 速度数组
-int32_t Vstd[4]; // 标准速度
+uint32_t mall[4] = {0};
+uint16_t mtep[4] = {0};
+float v[4] = {0}; // 速度数组
+int32_t vstd[4]; // 标准速度
 float Voltage = 0.0f; // 电池电压
 
 void MDrv_ReadVol(char *charArray) {
@@ -122,11 +121,11 @@ HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t V
         1000) {
         return HAL_ERROR; // 错误处理，速度值超出范围
     }
-    snprintf(cmd, sizeof(cmd), "$spd:%ld,%ld,%ld,%ld#", Vm1, Vm2, Vm3, Vm4);
-    Vstd[0] = Vm1; // 更新全局速度数组
-    Vstd[1] = Vm2;
-    Vstd[2] = Vm3;
-    Vstd[3] = Vm4;
+    snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
+    vstd[0] = Vm1; // 更新全局速度数组
+    vstd[1] = Vm2;
+    vstd[2] = Vm3;
+    vstd[3] = Vm4;
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -206,7 +205,7 @@ void MDrv_ProcessMSPD(char *data) {
 
         // 转换为 float 并存入 V[i]
         if (j > 0)
-            V[i++] = atof(temp);
+            v[i++] = atof(temp);
 
         // 跳过逗号（如果有）
         if (*ptr == ',') ptr++;
@@ -264,6 +263,30 @@ void MDrv_Init() {
     MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
     // MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
     HAL_Delay(95);
-    Mdrv_ReadVol();
+    // Mdrv_ReadVol();
     HAL_Delay(95);
+}
+
+uint32_t Mdrv_ReadMALL(int8_t MX) {
+    // 发送指令 "$MALL#"
+    if (MX == -1)
+        return (mall[0] + mall[1] + mall[2] + mall[3]) / 4; // 返回所有电机的编码器值之和
+    else
+        return mall[MX]; // 返回第一个电机的编码器值
+}
+
+uint16_t Mdrv_ReadMTEP(int8_t MX) {
+    // 发送指令 "$MTEP#"
+    if (MX == -1)
+        return (mtep[0] + mtep[1] + mtep[2] + mtep[3]) / 4; // 返回所有电机的实时转动编码器值之和
+    else
+        return mtep[MX]; // 返回第一个电机的实时转动编码器值
+}
+
+float Mdrv_Readspeed(int8_t MX) {
+    // 发送指令 "$MSPD#"
+    if (MX == -1)
+        return (v[0] + v[1] + v[2] + v[3]) / 4.0; // 返回所有电机的速度之和
+    else
+        return v[MX]; // 返回第一个电机的速度
 }

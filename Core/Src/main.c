@@ -36,7 +36,6 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
-uint8_t LineWalking_Data;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -54,11 +53,11 @@ uint8_t LineWalking_Data;
 /* USER CODE BEGIN PV */
 // volatile 代表变量可能会被中断或其他线程修改，防止编译器优化
 extern volatile uint8_t mpu6050_data_ready_flag = 0;
-extern volatile uint8_t linewalking_data_ready_flag = 0;
+extern volatile uint8_t linewalking_data_ready_flag = 1; // 让其先触发一次
+uint8_t LineWalking_Data = 0;
 // volatile PID_Controller motor_pids[4];
 
 uint8_t DataBuff[200]; //保存接收到的数据的数组
-int RxLine = 0; //接收到的数据长度
 
 /* USER CODE END PV */
 
@@ -73,8 +72,8 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void Uart_JudgeDataType(char *Udata) {
-    HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *) Udata, strlen(Udata), Uart_MaxWait);
-    if (strncmp(Udata, "$MALL:", 6) == 0) {
+    // HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *) Udata, strlen(Udata), Uart_MaxWait);
+    if (strncmp(Udata, "$MAll:", 6) == 0) {
         MDrv_ProcessMALL(Udata + 6);
     } else if (strncmp(Udata, "$MTEP:", 6) == 0) {
         MDrv_ProcessMTEP(Udata + 6);
@@ -112,7 +111,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     // 这个回调函数会在接收到数据时被调用
     if (huart->Instance == UMUART_Cfg.Instance) {
-        DataBuff[Size] = '\0'; // 确保字符串结束
+        DataBuff[Size-1] = '\0'; // 确保字符串结束
         Uart_JudgeDataType(DataBuff); // [Debug 删除调速函数]处理接收到的数据
         // HAL_UART_Transmit(&UMUART_Cfg, DataBuff, Size, Uart_MaxWait); // Debug【回传】
         HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 继续接收字节
@@ -129,10 +128,10 @@ void OLED_Debug(char mode, uint8_t showtype) {
         } else if (showtype == 1) {
             OLED_ShowFloat(1, 2, MPU6050_Data.Gz, 3, 2, 8);
             OLED_ShowFloat(1, 3, MPU6050_Data.YawAngle, 3, 2, 8);
-            OLED_ShowFloat(40, 2, V[0], 3, 2, 8);
-            OLED_ShowFloat(40, 3, V[1], 3, 2, 8);
-            OLED_ShowFloat(40, 4, V[2], 3, 2, 8);
-            OLED_ShowFloat(40, 5, V[3], 3, 2, 8);
+            OLED_ShowFloat(40, 2, Mdrv_Readspeed(0), 3, 2, 8);
+            OLED_ShowFloat(40, 3, Mdrv_Readspeed(1), 3, 2, 8);
+            OLED_ShowFloat(40, 4, Mdrv_Readspeed(2), 3, 2, 8);
+            OLED_ShowFloat(40, 5, Mdrv_Readspeed(3), 3, 2, 8);
             OLED_ShowFloat(80, 7, Voltage, 1, 2, 8);
         }
     } else if (mode == 'L') {
@@ -196,7 +195,24 @@ int main(void) {
     HAL_Delay(200);
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
     OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题
-    Mdrv_UploadData(1, 0, 1); // 上传MSPD到MCU
+    Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
+
+    // MPU6050_Get_Angle_yaw(&MPU6050_Data);
+    // float yaw = MPU6050_Data.YawAngle; // 获取陀螺仪数据
+    //
+    // char str[80];
+    // sprintf(str, "LTK:Q-%d,Yaw:%f", Mdrv_ReadMALL(-1), yaw);
+    // HAL_UART_Transmit(&Bluetooth_Cfg,str,strlen(str), Uart_MaxWait); // Debug 回传
+    //
+    // Motion_Forward(200);
+    // HAL_Delay(10000); // 前进10秒
+    // Motion_Stop();
+    //
+    // MPU6050_Get_Angle_yaw(&MPU6050_Data);
+    // yaw = MPU6050_Data.YawAngle; // 获取陀螺仪数据
+    // sprintf(str, "LTS:E-%d, Yaw: %f ", Mdrv_ReadMALL(-1), yaw); // 停止前进
+    // HAL_UART_Transmit(&Bluetooth_Cfg,str,strlen(str), Uart_MaxWait); // Debug 回传
+
     /* USER CODE END 2 */
 
     /* Infinite loop */
@@ -209,7 +225,7 @@ int main(void) {
         OLED_Debug('L', 1); // OLED 显示 LineWalking 数据
         if (linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;
-            // LineWalking(LineWalking_Data, 300); // 传感器数据处理
+            LineWalking(LineWalking_Data, 200); // 传感器数据处理
         }
         Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);
         // while (Delay_Expired(&timer, 2000) == 0)  添加延时函数

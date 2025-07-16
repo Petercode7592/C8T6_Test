@@ -24,6 +24,7 @@ uint8_t GetLineWalking() {
 /* 车体几何参数（单位 mm） */
 #define TRACK_WIDTH   135.0f   // 左右轮中心距离
 #define WHEEL_BASE    145.0f   // 前后轴中心距离
+uint8_t before_state = -1; // 上一次状态
 
 
 void LineWalking(uint8_t state, int16_t speed) {
@@ -44,15 +45,26 @@ void LineWalking(uint8_t state, int16_t speed) {
     HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *)txBuffer, strlen(txBuffer), HAL_MAX_DELAY);
 
     // 严格匹配原逻辑的优先级顺序（从强烈转向到微调，再到直行）
-    if ((L1 == Low || R1 == Low) && R2 == Low) {
+    // L1 = 0 R2 = 0
+    if (L2 == Low && R2 == Low && L1 == Low && R1 == Low) {
+        // 四个传感器都看到线（后退）
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Backward#\r\n", 18, HAL_MAX_DELAY);
+        Motion_SpinTaskStart(20.0f,100); // 这里的速度可以根据实际情况调整 bug
+    }
+    else if (L2 == High && R2 == High && L1 == High && R1 == High) {
+        // 四个传感器都没看到线（
+        // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Stop#\r\n", 14, HAL_MAX_DELAY);
+        Motion_Backward(speed); // bug
+    }
+    else if ((L1 == Low || R1 == Low ) && R2 == Low) {
         // 右直角（强右偏）：右大弯
         // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Turn#\r\n", 20, HAL_MAX_DELAY);
-        Motion_SpinTaskStart(45.0f, speed);
+        Motion_SpinTaskStart(40.0f, speed);
     }
     else if (L2 == Low && (R1 == Low || L1 == Low)) {
         // 左直角（强左偏）：左大弯
         // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Turn#\r\n", 19, HAL_MAX_DELAY);
-        Motion_SpinTaskStart(-45.0f, speed);
+        Motion_SpinTaskStart(-40.0f, speed);
     }
     else if (L2 == Low) {
         // 左最外侧感应器触发（轻微左偏）
@@ -81,7 +93,12 @@ void LineWalking(uint8_t state, int16_t speed) {
     }
     else {
         // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:OTHER/Backward#\r\n", 22, HAL_MAX_DELAY);
-        // 否则：没看到线，停止或后退[bug]
+        // 上面已经全覆盖了,所有16种情况
         Motion_Backward(speed);
+    }
+
+    if (before_state != state) {
+        // 如果状态变化了，发送状态变化信息
+        before_state = state;
     }
 }
