@@ -75,13 +75,13 @@ void LineWalking(uint8_t state, int16_t speed) {
         Motion_SpinTaskStart(-40.0f, speed);
     }
     else if (L2 == Low) {
-        // 左最外侧感应器触发（轻微左偏）
+        // 左最外侧感应器触发（轻微左偏）原地左旋转
         // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Left Slight#\r\n", 20, HAL_MAX_DELAY);
         Motion_SpinTaskStart(-10.0f, speed);
     }
     else if (R2 == Low) {
         // HAL_UART_Transmit(&Bluetooth_Cfg, "$LWK:Right Slight#\r\n", 21, HAL_MAX_DELAY);
-        // 右最外侧感应器触发（轻微右偏）
+        // 右最外侧感应器触发（轻微右偏）原地右旋
         Motion_SpinTaskStart(10.0f, speed);
     }
     else if (L1 == Low && R1 == Low) {
