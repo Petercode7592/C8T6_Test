@@ -40,8 +40,6 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/Mdrv.c
         Drivers/YYFDrive/LineWalking.h
         Drivers/YYFDrive/LineWalking.c
-        Drivers/YYFDrive/PID.c
-        Drivers/YYFDrive/PID.h
         Drivers/YYFDrive/MPU6050.c
         Drivers/YYFDrive/MPU6050.h
         Drivers/YYFDrive/oled.c
