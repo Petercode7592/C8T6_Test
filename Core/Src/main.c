@@ -186,13 +186,20 @@ int main(void) {
     /* USER CODE BEGIN 2 */
     MDrv_Init(); // 初始化驱动板
     OLED_Init(&hi2c2);
-    MPU6050_Init();
-    HAL_Delay(750);
 
     OLED_ShowString(1, 1, "MPU6050 Init....", 8);
-    MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
+    // 6050 烧坏了才知道原来这玩意不在时会卡校准
+    if (MPU6050_Init()) {
+        OLED_ShowString(1,2, "MPU6050 Err!", 8);
+        HAL_Delay(2500);
+    }
+    else {
+        HAL_Delay(1000);
+        MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
+    }
     OLED_Clear();
     HAL_Delay(200);
+
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
     OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU

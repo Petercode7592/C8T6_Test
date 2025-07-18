@@ -25,9 +25,11 @@ static inline void wr(uint8_t reg, uint8_t val)
     HAL_I2C_Master_Transmit(&hi2c1, MPU6050_ADDR, d, 2, 100);
 }
 
-// --- 公共函数定义 ---
 
-/* ───── 初始化 ───── */
+/**
+ * @brief 初始化 MPU6050 传感器
+ * @retval 0 成功，1 失败
+ */
 uint8_t MPU6050_Init(void)
 {
     uint8_t id;
@@ -47,7 +49,8 @@ uint8_t MPU6050_Init(void)
 }
 
 /**
- * @brief 新增的校准函数
+ * @brief MPU6050 陀螺仪校准
+ * @note 读取2000次陀螺仪数据进行平均，计算偏置值
  */
 void MPU6050_Calibrate_Gyro(void)
 {
@@ -79,6 +82,11 @@ void MPU6050_Calibrate_Gyro(void)
 }
 
 
+/**
+ * @brief 读取 MPU6050 的所有传感器数据
+ * @param DataStruct 指向 MPU6050_Data_t 结构体的指针
+ * @note 此函数会读取加速度计、陀螺仪和温度传感器的数据，并进行转换
+ */
 void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
 {
     uint8_t Rec_Data[14];
@@ -124,6 +132,11 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
 
 }
 
+/**
+ * @brief 获取 MPU6050 的偏航角（Yaw）
+ * @param DataStruct 指向 MPU6050_Data_t 结构体的指针
+ * @note 此函数会读取陀螺仪 Z 轴数据并计算偏航角
+ */
 void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) \
 {
     uint8_t Rec_Data[14];
@@ -141,6 +154,15 @@ void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) \
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
 }
 
+/**
+ * @brief 卡尔曼滤波算法
+ * @param Kalman 指向 Kalman_t 结构体的指针
+ * @param newAngle 新的角度值
+ * @param newRate 新的角速度值
+ * @param dt 时间间隔
+ * @retval 返回滤波后的角度值
+ * @note 内部定义算法
+ */
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt)
 {
     double rate = newRate - Kalman->bias;
