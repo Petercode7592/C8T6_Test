@@ -19,16 +19,12 @@ float v[4] = {0}; // 速度数组
 int32_t vstd[4]; // 标准速度
 float Voltage = 0.0f; // 电池电压
 
-void MDrv_ReadVol(char *charArray) {
-    // 接收放在中断内
-    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$read_vol#", 10, Uart_MaxWait);
-}
 
 /** @brief  (Checked)MCU 驱动板复位
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_Reset() {
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) "$flash_reset#", 13, Uart_MaxWait);
+    return HAL_UART_Transmit(&UMUART_Cfg, "$flash_reset#\r\n", 13, Uart_MaxWait);
 }
 
 /** @brief 配置电机类型
@@ -38,8 +34,8 @@ HAL_StatusTypeDef MDrv_Reset() {
   */
 HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype) {
     char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mtype:%d#", mtype);
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    snprintf(cmd, sizeof(cmd), "$mtype:%d#\r\n", mtype);
+    return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -50,8 +46,8 @@ HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype) {
   */
 HAL_StatusTypeDef Mdrv_SetMline(uint8_t mline) {
     char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mline:%d#", mline); // 发送指令
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    snprintf(cmd, sizeof(cmd), "$mline:%d#\r\n", mline); // 发送指令
+    return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -62,8 +58,8 @@ HAL_StatusTypeDef Mdrv_SetMline(uint8_t mline) {
   */
 HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase) {
     char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mphase:%d#", mphase); // 发送指令
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    snprintf(cmd, sizeof(cmd), "$mphase:%d#\r\n", mphase); // 发送指令
+    return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
@@ -76,8 +72,8 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone) {
     char cmd[25];
     if (deadzone <= 3600) {
         // 确保死区值在0到3600之间
-        snprintf(cmd, sizeof(cmd), "$deadzone:%ld#", deadzone); // 发送指令
-        return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+        snprintf(cmd, sizeof(cmd), "$deadzone:%ld#\r\n", deadzone); // 发送指令
+        return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
     }
     return HAL_ERROR; // 错误处理
 }
@@ -90,8 +86,8 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone) {
   */
 HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
     char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$wdiameter:%d#", wdiameter); // 发送指令
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    snprintf(cmd, sizeof(cmd), "$wdiameter:%d#\r\n", wdiameter); // 发送指令
+    return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /** @brief (bug)设置PID参数, 设置后芯片会重启，会把正在运动的电机停止
@@ -104,8 +100,8 @@ HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
 HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d) {
     // 发送指令
     char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#", p, i, d);
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#\r\n", p, i, d);
+    return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /** * @brief 设置各个电机速度(单位mm/s)
@@ -121,22 +117,26 @@ HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t V
         1000) {
         return HAL_ERROR; // 错误处理，速度值超出范围
     }
-    snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
+    snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#\r\n", Vm1, Vm2, Vm3, Vm4);
     vstd[0] = Vm1; // 更新全局速度数组
     vstd[1] = Vm2;
     vstd[2] = Vm3;
     vstd[3] = Vm4;
-    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
 /**
-  * @brief 设置电机的PWM值
-  * @param pwm 电机的PWM值数组，长度为4，范围为-3600到3600. 为负时表示反向转动，正时表示正向转动
-  * @note 此函数会设置所有电机的PWM值，pwm[0]对应电机1，pwm[1]对应电机2，pwm[2]对应电机3，pwm[3]对应电机4
+  * @brief 设置各个电机的PWM值
+  * @param pwm1 电机1的PWM值
+  * @param pwm2 电机2的PWM值
+  * @param pwm3 电机3的PWM值
+  * @param pwm4 电机4的PWM值
+  * @note PWM值范围0-1000，超过范围会返回错误
+  * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetPWM(int32_t pwm1, int32_t pwm2, int32_t pwm3, int32_t pwm4) {
     char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm1, pwm2, pwm3, pwm4);
+    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#\r\n", pwm1, pwm2, pwm3, pwm4);
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -152,7 +152,7 @@ HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall,  uint8_t mtep, uint8_t mspd) {
     // 发送上传数据指令
     // 假设mall, mtep, mspd是需要上传的数据 相应变量赋值1代表回传该部分的数据
     char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#", mall, mtep, mspd);
+    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#\r\n", mall, mtep, mspd);
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -176,6 +176,7 @@ void MDrv_ProcessMTEP(char *data) {
   * @param data 包含速度数据的字符串
   * @note 该函数会解析数据并存储到全局变量 V 数组中，代表当前小车实时速度
   */
+
 void MDrv_ProcessMSPD(char *data) {
     // 处理 $MSPD 数据 代表轮子转动的实时速度数据
     // 例如解析数据并存储到相应的变量中
@@ -235,8 +236,7 @@ void MDrv_ProcessVol(char *data) {
   * @retval void
   */
 void Mdrv_ReadVol() {
-    char cmd[] = "$read_vol#"; // 发送指令
-    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
+    HAL_UART_Transmit(&UMUART_Cfg, "$read_vol#\r\n", 13, Uart_MaxWait);
 }
 
 /**
@@ -271,22 +271,19 @@ uint32_t Mdrv_ReadMALL(int8_t MX) {
     // 发送指令 "$MALL#"
     if (MX == -1)
         return (mall[0] + mall[1] + mall[2] + mall[3]) / 4; // 返回所有电机的编码器值之和
-    else
-        return mall[MX]; // 返回第一个电机的编码器值
+    return mall[MX]; // 返回第一个电机的编码器值
 }
 
 uint16_t Mdrv_ReadMTEP(int8_t MX) {
     // 发送指令 "$MTEP#"
     if (MX == -1)
         return (mtep[0] + mtep[1] + mtep[2] + mtep[3]) / 4; // 返回所有电机的实时转动编码器值之和
-    else
-        return mtep[MX]; // 返回第一个电机的实时转动编码器值
+    return mtep[MX]; // 返回第一个电机的实时转动编码器值
 }
 
 float Mdrv_Readspeed(int8_t MX) {
     // 发送指令 "$MSPD#"
     if (MX == -1)
         return (v[0] + v[1] + v[2] + v[3]) / 4.0; // 返回所有电机的速度之和
-    else
-        return v[MX]; // 返回第一个电机的速度
+    return v[MX]; // 返回第一个电机的速度
 }
