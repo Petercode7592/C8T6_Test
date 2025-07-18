@@ -7,7 +7,6 @@
 #define MDRV_H
 
 #include "main.h"
-#include "PID.h"
 
 extern uint32_t mall[4];
 extern uint16_t mtep[4];
@@ -35,7 +34,6 @@ void MDrv_ProcessMSPD(char *data);
 void MDrv_ProcessVol(char *data);
 
 void Mdrv_ReadVol();
-
 void MDrv_Init();
 
 uint32_t Mdrv_ReadMALL(int8_t MX);
