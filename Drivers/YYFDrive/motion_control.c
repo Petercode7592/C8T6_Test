@@ -23,6 +23,10 @@ static float spin_target_angle = 0.0f;
 static int16_t spin_speed = 0;
 static uint8_t spin_active = 0;
 
+/**
+ * @brief 小车前进
+ * @param speed 线速度，单位 mm/s，为 0 时使用上一次速度
+ */
 void Motion_Forward(int16_t speed)
 {
     if (speed != 0)
@@ -56,6 +60,10 @@ void Motion_right(int16_t speed)
     MDrv_SetSpeed(0, 0, spd_spin, spd_spin);
 }
 
+/**
+ * @brief 小车原地旋转
+ * @param speed 旋转速度，单位 mm/s，<0 为右转，>0 为左转，为 0 使用上次速度(bug)
+ */
 void Motion_Spin(int16_t speed)
 {
     if (speed != 0)
@@ -63,6 +71,11 @@ void Motion_Spin(int16_t speed)
     MDrv_SetSpeed(-spd_spin, -spd_spin, spd_spin, spd_spin);
 }
 
+/**
+ * @brief 小车弧形转弯前进（非原地）
+ * @param angle_deg 转弯方向角，正右负左（单位 °）
+ * @param forward_speed 前进速度，单位 mm/s，为 0 使用上次速度
+ */
 void Motion_ArcTurn(float angle_deg, int16_t forward_speed)
 {
     if (forward_speed != 0)
@@ -77,20 +90,33 @@ void Motion_ArcTurn(float angle_deg, int16_t forward_speed)
     MDrv_SetSpeed(Lspd, Lspd, Rspd, Rspd);
 }
 
+/**
+ * @brief 小车立即停止运动
+ */
 void Motion_Stop(void)
 {
     MDrv_SetSpeed(0, 0, 0, 0);
+    MDrv_SetPWM(0, 0, 0, 0);  // 停止电机输出
 }
 
+/**
+ * @brief 启动基于角度的原地旋转任务
+ * @param angle_deg 目标旋转角，正左转，负右转（单位 °）
+ * @param speed 旋转速度，单位 mm/s，自动取绝对值
+ */
 void Motion_SpinTaskStart(float angle_deg, int16_t speed)
 {
     float start_deg = MPU6050_Data.YawAngle;  // 假设起始角度为0度
-    float target = start_deg + angle_deg;  // 不限制角度范围，允许跨360度
-    spin_target_angle = target;
+    spin_target_angle = start_deg + angle_deg;  // 不限制角度范围，允许跨360度
     spin_speed = abs(speed);
     spin_active = 1;
 }
 
+/**
+ * @brief 旋转任务更新函数，应周期调用以检查旋转角度完成状态
+ * @param now_angle 当前实时航向角（单位 °）
+ * @note 该函数会根据当前角度和目标角度计算差值，并控制电机速度
+ */
 void Motion_SpinTaskUpdate(float now_angle)
 {
     if (!spin_active)
@@ -112,6 +138,9 @@ void Motion_SpinTaskUpdate(float now_angle)
     }
 }
 
+/**
+ * @brief 强制中止原地旋转任务
+ */
 void Motion_AbortSpin(void)
 {
     spin_active = 0;
