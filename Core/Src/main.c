@@ -54,7 +54,7 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 // volatile 代表变量可能会被中断或其他线程修改，防止编译器优化
 extern volatile uint8_t mpu6050_data_ready_flag = 0;
 extern volatile uint8_t linewalking_data_ready_flag = 1; // 让其先触发一次
-uint8_t LineWalking_Data = 100; // 错误值判断
+uint8_t LineWalking_Data = 100; // 初始值判断
 // volatile PID_Controller motor_pids[4];
 
 uint8_t DataBuff[200]; //保存接收到的数据的数组
@@ -137,7 +137,7 @@ void OLED_Debug(char mode, uint8_t showtype) {
     } else if (mode == 'L') {
         // OLED 显示 LineWalking 数据
         if (showtype == 0) {
-            OLED_ShowString(1, 7, "LineWalking", 8);
+            OLED_ShowString(1, 7, "LineWK Status", 8);
             OLED_ShowString(1, 1, "L2 L1 R1 R2", 8);
         } else if (showtype == 1) {
             // 显示 LineWalking 数据
@@ -186,12 +186,13 @@ int main(void) {
     /* USER CODE BEGIN 2 */
     MDrv_Init(); // 初始化驱动板
     OLED_Init(&hi2c2);
+    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
 
     OLED_ShowString(1, 1, "MPU6050 Init....", 8);
     // 6050 烧坏了才知道原来这玩意不在时会卡校准
     if (MPU6050_Init()) {
         OLED_ShowString(1,2, "MPU6050 Err!", 8);
-        HAL_Delay(2500);
+        HAL_Delay(2000);
     }
     else {
         HAL_Delay(1000);
@@ -200,7 +201,7 @@ int main(void) {
     OLED_Clear();
     HAL_Delay(200);
 
-    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, DataBuff, 200); // 启动DMA接收，接收字节
+
     OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题
     Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
 
@@ -229,7 +230,6 @@ int main(void) {
             mpu6050_data_ready_flag = 0;
             MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
         }
-        OLED_Debug('L', 1); // OLED 显示 LineWalking 数据
         if (linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;
             if (LineWalking_Data == 100) {
@@ -237,8 +237,8 @@ int main(void) {
             }
             LineWalking(LineWalking_Data, 200); // 传感器数据处理
         }
-        Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);
-        // while (Delay_Expired(&timer, 2000) == 0)  添加延时函数
+        OLED_Debug('L',1); // OLED 显示 LineWalking 数据
+        Motion_SpinTaskUpdate(MPU6050_Data.YawAngle); // 是否不需要实时更新？内部有转弯判断
     }
 
     /* USER CODE END WHILE */

@@ -43,7 +43,7 @@ void LineWalking(uint8_t state, int16_t speed) {
     // 拼接字符串（可用 snprintf 更安全）
     sprintf(txBuffer, "$LWK:%d%d %d%d#\r\n", L2, L1, R1, R2);
     // 通过蓝牙发送
-    HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *)txBuffer, strlen(txBuffer), HAL_MAX_DELAY);
+    HAL_UART_Transmit(&Bluetooth_Cfg, txBuffer, strlen(txBuffer), HAL_MAX_DELAY);
 
     // 严格匹配原逻辑的优先级顺序（从强烈转向到微调，再到直行）
     // L1 = 0 R2 = 0
