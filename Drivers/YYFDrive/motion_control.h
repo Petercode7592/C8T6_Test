@@ -6,11 +6,15 @@
 
 void Motion_Forward(int16_t speed);
 void Motion_Backward(int16_t speed);
-void Motion_right(int16_t speed);
-void Motion_left(int16_t speed);
+void Motion_LeftTurnByRadius(int16_t speed, float radius);
+void Motion_RightTurnByRadius(int16_t speed, float radius);
+void Motion_LeftTurnByAngdps(int16_t speed, float angspeed_dps);
+void Motion_RightTurnByAngdps(int16_t speed, float angspeed_dps);
+
+
 
 void Motion_Spin(int16_t speed);
-void Motion_ArcTurn(float angle_deg, int16_t forward_speed);
+void Motion_RotationTurn(float angle_deg, int16_t forward_speed);
 
 void Motion_Stop(void);
 
