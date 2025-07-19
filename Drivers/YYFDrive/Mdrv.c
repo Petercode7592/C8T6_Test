@@ -249,7 +249,7 @@ void Mdrv_ReadVol() {
 void MDrv_Init() {
     // MDrv_SetPID(0.8, 0.06, 0.5);
     // P:1.9,I:0.2,D:0.8
-    // HAL_Delay(90);
+    // 1.5 0.15 1.8
     MDrv_SetMtype(2); // 设置为310电机
     HAL_Delay(100);
     Mdrv_SetMline(13); // 设置电机的相位线
