@@ -46,8 +46,6 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/YYFDrive/oled.h
         Drivers/YYFDrive/oledfont.c
         Drivers/YYFDrive/oledfont.h
-        Drivers/YYFDrive/bluetooth.c
-        Drivers/YYFDrive/bluetooth.h
         Drivers/YYFDrive/motion_control.c
         Drivers/YYFDrive/motion_control.h
         Drivers/YYFDrive/Global.h
