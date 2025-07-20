@@ -242,29 +242,32 @@ void Mdrv_ReadVol() {
 /**
   * @brief (bug)初始化驱动板
   * @retval HAL_StatusTypeDef 返回状态
-  * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时90ms,收到HAL_OK只代表发出去不代表已经MD收到
+  * @param mode 初始化模式，0表示设置电机参数，1表示仅设置不启动
+  * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时>150ms,收到HAL_OK只代表发出去不代表已经MD收到
   * @bug 1. 设置电机速度无论延迟多少都无法正确设置，可能要收到单片机回传的正确时间
   * @bug 2. 死区值需要测量得出，不能随意设置
   */
-void MDrv_Init() {
+void MDrv_Init(int mode) {
     // MDrv_SetPID(0.8, 0.06, 0.5);
     // P:1.9,I:0.2,D:0.8
     // 1.5 0.15 1.8
-    MDrv_SetMtype(2); // 设置为310电机
-    HAL_Delay(100);
-    Mdrv_SetMline(13); // 设置电机的相位线
-    HAL_Delay(70);
-    Mdrv_SetMphase(20); // 设置电机的减速比
-    HAL_Delay(95);
-    MDrv_SetWdiameter(48); // 设置车轮直径
-    HAL_Delay(100);
-    MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
-    HAL_Delay(90);
+    if (mode == 0) {
+        MDrv_SetMtype(2); // 设置为310电机
+        HAL_Delay(125);
+        Mdrv_SetMline(13); // 设置电机的相位线
+        HAL_Delay(125);
+        Mdrv_SetMphase(20); // 设置电机的减速比
+        HAL_Delay(125);
+        MDrv_SetWdiameter(48); // 设置车轮直径
+        HAL_Delay(125);
+        MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
+        HAL_Delay(125);
+    }
+
     MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
     // MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
     HAL_Delay(95);
     // Mdrv_ReadVol();
-    HAL_Delay(95);
 }
 
 uint32_t Mdrv_ReadMALL(int8_t MX) {
@@ -281,6 +284,12 @@ uint16_t Mdrv_ReadMTEP(int8_t MX) {
     return mtep[MX]; // 返回第一个电机的实时转动编码器值
 }
 
+/**
+ * @brief 读取电机速度
+ * @param MX 电机索引，-1表示返回所有电机的平均速度
+ * @return 返回指定电机的速度，或所有电机的平均速度
+ * @note 速度单位为mm/s 0MX 代表
+ */
 float Mdrv_Readspeed(int8_t MX) {
     // 发送指令 "$MSPD#"
     if (MX == -1)
