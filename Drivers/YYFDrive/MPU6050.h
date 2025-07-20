@@ -46,8 +46,8 @@ typedef struct {
     double P[2][2];
 } Kalman_t;
 
-/* ───── API ───── */
-uint8_t MPU6050_Init(void);
+
+uint8_t MPU6050_Init(I2C_HandleTypeDef *hc);
 void    MPU6050_Calibrate_Gyro(void);
 void    MPU6050_Read_All(MPU6050_Data_t *data);
 void    MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct);

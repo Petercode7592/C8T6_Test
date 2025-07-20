@@ -16,13 +16,15 @@ static double currentYaw = 0.0;
 // 新增：用于存储陀螺仪XYZ三轴偏置的变量
 static float gx_bias=0, gy_bias=0, gz_bias=0;
 
+I2C_HandleTypeDef *LWKhIIC;
+
 // --- 私有函数声明 ---
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt);
 
 static inline void wr(uint8_t reg, uint8_t val)
 {
     uint8_t d[2] = {reg,val};
-    HAL_I2C_Master_Transmit(&hi2c1, MPU6050_ADDR, d, 2, 100);
+    HAL_I2C_Master_Transmit(LWKhIIC, MPU6050_ADDR, d, 2, 100);
 }
 
 
@@ -30,12 +32,12 @@ static inline void wr(uint8_t reg, uint8_t val)
  * @brief 初始化 MPU6050 传感器
  * @retval 0 成功，1 失败
  */
-uint8_t MPU6050_Init(void)
+uint8_t MPU6050_Init(I2C_HandleTypeDef *hc)
 {
     uint8_t id;
-    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, WHO_AM_I_REG,1,&id,1,100);
+    HAL_I2C_Mem_Read(hc, MPU6050_ADDR, WHO_AM_I_REG,1,&id,1,100);
     if (id != 0x68) return 1;
-
+    LWKhIIC = hc; // 保存 I2C 句柄
     wr(PWR_MGMT_1_REG, 0x01);    /* PLL with X-gyro */
     wr(SMPLRT_DIV_REG, 0x09);    /* 100 Hz */
     wr(CONFIG_REG,      0x03);   /* DLPF 42 Hz  */
@@ -63,7 +65,7 @@ void MPU6050_Calibrate_Gyro(void)
     const int num_samples = 2000;
     for (i = 0; i < num_samples; i++)
     {
-        HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, GYRO_XOUT_H_REG, 1, Rec_Data, 6, 1000);
+        HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, GYRO_XOUT_H_REG, 1, Rec_Data, 6, 1000);
         gx_raw = (int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
         gy_raw = (int16_t)(Rec_Data[2] << 8 | Rec_Data[3]);
         gz_raw = (int16_t)(Rec_Data[4] << 8 | Rec_Data[5]);
@@ -92,7 +94,7 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
     uint8_t Rec_Data[14];
     int16_t temp_raw;
 
-    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
+    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
 
     DataStruct->Accel_X_RAW = (int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
     DataStruct->Accel_Y_RAW = (int16_t)(Rec_Data[2] << 8 | Rec_Data[3]);
@@ -128,7 +130,7 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
     currentYaw += gz_calibrated * dt;
     DataStruct->YawAngle = currentYaw;
     uint8_t dummy;
-    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
+    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
 
 }
 
@@ -140,7 +142,7 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
 void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) \
 {
     uint8_t Rec_Data[14];
-    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
+    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
     DataStruct->Gyro_Z_RAW  = (int16_t)(Rec_Data[12] << 8 | Rec_Data[13]);
     DataStruct->Gz = DataStruct->Gyro_Z_RAW / GYRO_SENSITIVITY;
     double dt = (double)(HAL_GetTick() - timer) / 1000.0;
@@ -151,7 +153,7 @@ void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) \
     DataStruct->YawAngle = currentYaw;
 
     uint8_t dummy;
-    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
+    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
 }
 
 /**
