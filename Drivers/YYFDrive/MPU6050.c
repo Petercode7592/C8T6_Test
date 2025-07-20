@@ -131,7 +131,6 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
     DataStruct->YawAngle = currentYaw;
     uint8_t dummy;
     HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
-
 }
 
 /**

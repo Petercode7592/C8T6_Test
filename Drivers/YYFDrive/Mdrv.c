@@ -142,17 +142,17 @@ HAL_StatusTypeDef MDrv_SetPWM(int32_t pwm1, int32_t pwm2, int32_t pwm3, int32_t 
 
 /**
   * @brief 上传数据
-  * @param mall 是否上传轮子转动的总编码器数据
-  * @param mtep 是否上传10ms转动的实时转动编码器数据(实际值)
-  * @param mspd 是否上传轮子转动的实时速度数据(计算值)
+  * @param mall_en 是否上传轮子转动的总编码器数据
+  * @param mtep_en 是否上传10ms转动的实时转动编码器数据(实际值)
+  * @param mspd_en 是否上传轮子转动的实时速度数据(计算值)
   * @note mall, mtep, mspd分别为0或1，1代表回传该部分的数据
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall,  uint8_t mtep, uint8_t mspd) {
+HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall_en,  uint8_t mtep_en, uint8_t mspd_en) {
     // 发送上传数据指令
     // 假设mall, mtep, mspd是需要上传的数据 相应变量赋值1代表回传该部分的数据
     char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#\r\n", mall, mtep, mspd);
+    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#\r\n", mall_en, mtep_en, mspd_en);
     return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -264,8 +264,8 @@ void MDrv_Init(int mode) {
         HAL_Delay(125);
     }
 
-    MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
-    // MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
+    // MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
+    MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
     HAL_Delay(95);
     // Mdrv_ReadVol();
 }
