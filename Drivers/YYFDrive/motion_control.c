@@ -44,7 +44,7 @@ void Motion_Forward(int16_t speed)
 /**
  * @brief 小车后退(失速)
  * @param speed 线速度，单位 mm/s，为 0 时使用上一次速度
- * @note 友情提醒：小车后退速度过高会车轮失速
+ * @note ！小车后退速度过高会车轮失速,并且后退时四轮速度不等
  */
 void Motion_Backward(int16_t speed)
 {
@@ -134,6 +134,18 @@ void Motion_RightTurnByAngdps(int16_t speed, float angspeed_dps)
     MDrv_SetSpeed(Lspd, Lspd, Rspd, Rspd);
 }
 
+
+/**
+ * @brief  通过设定左右轮速度来驱动小车
+ * @note   M1, M2为左轮组; M3, M4为右轮组
+ * @param  left_speed  左轮速度
+ * @param  right_speed 右轮速度
+ */
+void Motion_SetLR_Speed(int16_t left_speed, int16_t right_speed)
+{
+    // 假设 M1, M2 是左轮，M3, M4 是右轮
+    MDrv_SetSpeed(left_speed, left_speed, right_speed, right_speed);
+}
 
 /**
  * @brief 小车原地旋转

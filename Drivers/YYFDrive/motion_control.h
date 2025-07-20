@@ -11,7 +11,7 @@ void Motion_RightTurnByRadius(int16_t speed, float radius);
 void Motion_LeftTurnByAngdps(int16_t speed, float angspeed_dps);
 void Motion_RightTurnByAngdps(int16_t speed, float angspeed_dps);
 
-
+void Motion_SetLR_Speed(int16_t left_speed, int16_t right_speed);
 
 void Motion_Spin(int16_t speed);
 void Motion_RotationTurn(float angle_deg, int16_t forward_speed);
