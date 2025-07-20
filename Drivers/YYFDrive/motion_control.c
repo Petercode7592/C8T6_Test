@@ -54,27 +54,6 @@ void Motion_Backward(int16_t speed)
 }
 
 /**
- * @brief 按指定的“角速度(度/秒)”控制小车向左转弯
- * @param speed     小车前进的基础线速度 (mm/s)
- * @param angspeed_dps 小车自转的角速度，单位就是【度/秒】
- */
-void Motion_LeftTurnByAngdps(int16_t speed, float angspeed_dps)
-{
-    float angspeed_radps = angspeed_dps * DEG_TO_RAD;
-    // 计算由旋转产生的线速度分量，V_rot = V-z * (A+B)
-    float rotational_speed_component = angspeed_radps * KRadius;
-
-    // 左轮速度 = 前进速度 + 旋转分量 (左轮需要加速来实现左转)
-    int16_t Lspd = speed + (int16_t)rotational_speed_component;
-    // 右轮速度 = 前进速度 - 旋转分量 (右轮需要减速或反转来实现左转)
-    int16_t Rspd = speed - (int16_t)rotational_speed_component;
-
-    // 发送最终速度指令给电机驱动板
-    MDrv_SetSpeed(Lspd, Lspd, Rspd, Rspd);
-}
-
-
-/**
  * @brief 指定转弯半径控制小车左转
  * @param speed     小车中心前进的线速度 (mm/s)，负值为后退
  * @param radius    转弯轨迹的半径 (mm)，必须为正值
@@ -101,7 +80,7 @@ void Motion_LeftTurnByRadius(int16_t speed, float radius)
  * @param speed     小车前进的基础线速度 (mm/s)
  * @param angspeed_dps 小车自转的角速度，单位就是【度/秒】
  */
-void Motion_RightTurnByAngdps(int16_t speed, float angspeed_dps)
+void Motion_LeftTurnByAngdps(int16_t speed, float angspeed_dps)
 {
     // 1. 将您输入的“度/秒”转换为物理公式需要的“弧度/秒”
     float angspeed_radps = angspeed_dps * DEG_TO_RAD;
@@ -109,8 +88,8 @@ void Motion_RightTurnByAngdps(int16_t speed, float angspeed_dps)
     // 2. 使用“弧度/秒”进行后续计算
     float rotational_speed_component = angspeed_radps * KRadius;
 
-    int16_t Lspd = speed + (int16_t)rotational_speed_component;
-    int16_t Rspd = speed - (int16_t)rotational_speed_component;
+    int16_t Lspd = speed - (int16_t)rotational_speed_component;
+    int16_t Rspd = speed + (int16_t)rotational_speed_component;
     MDrv_SetSpeed(Lspd, Lspd, Rspd, Rspd);
 }
 
@@ -134,6 +113,27 @@ void Motion_RightTurnByRadius(int16_t speed, float radius)
 
     MDrv_SetSpeed(Lspd, Lspd, Rspd, Rspd);
 }
+
+/**
+ * @brief 按指定的“角速度(度/秒)”控制小车向左转弯
+ * @param speed     小车前进的基础线速度 (mm/s)
+ * @param angspeed_dps 小车自转的角速度，单位就是【度/秒】
+ */
+void Motion_RightTurnByAngdps(int16_t speed, float angspeed_dps)
+{
+    float angspeed_radps = angspeed_dps * DEG_TO_RAD;
+    // 计算由旋转产生的线速度分量，V_rot = V-z * (A+B)
+    float rotational_speed_component = angspeed_radps * KRadius;
+
+    // 左轮速度 = 前进速度 + 旋转分量 (左轮需要加速来实现左转)
+    int16_t Lspd = speed + (int16_t)rotational_speed_component;
+    // 右轮速度 = 前进速度 - 旋转分量 (右轮需要减速或反转来实现左转)
+    int16_t Rspd = speed - (int16_t)rotational_speed_component;
+
+    // 发送最终速度指令给电机驱动板
+    MDrv_SetSpeed(Lspd, Lspd, Rspd, Rspd);
+}
+
 
 /**
  * @brief 小车原地旋转
@@ -175,7 +175,7 @@ void Motion_Stop(void)
 }
 
 /**
- * @brief 启动基于角度的原地旋转任务
+ * @brief 启动基于角度的原地旋转任务[MPU6050]
  * @param angle_deg 目标旋转角
  * @param speed 旋转速度，单位 mm/s，自动取绝对值
  */
@@ -207,7 +207,7 @@ void Motion_SpinTaskUpdate(float now_angle)
         return;
     }
 
-    if (diff > 0) {
+    if (diff < 0) {
         MDrv_SetSpeed(spin_speed, spin_speed, -spin_speed, -spin_speed);
     } else {
         MDrv_SetSpeed(-spin_speed, -spin_speed, spin_speed, spin_speed);
