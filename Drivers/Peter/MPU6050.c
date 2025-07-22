@@ -1,10 +1,6 @@
 #include "MPU6050.h"
 #include <math.h>
 
-// --- 常量定义 ---
-#define RAD_TO_DEG 57.295779513
-#define ACCEL_SENSITIVITY 16384.0f
-#define GYRO_SENSITIVITY  131.0f
 
 // --- 静态全局变量 ---
 static Kalman_t KalmanX = { .Q_angle = 0.001f, .Q_bias = 0.003f, .R_measure = 0.03f };
@@ -138,21 +134,55 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
  * @param DataStruct 指向 MPU6050_Data_t 结构体的指针
  * @note 此函数会读取陀螺仪 Z 轴数据并计算偏航角
  */
-void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct) \
+/**
+ * @brief  通过积分Z轴陀螺仪数据来计算偏航角(Yaw)
+ * @note   这个函数必须被周期性地、高频率地调用 (例如每 5-20ms 一次) 才能保证精度。
+ * 这个方法存在固有的积分漂移，长时间运行后角度会不准确。
+ * 为了校正漂移，需要结合加速度计或磁力计进行数据融合（如互补滤波或卡尔曼滤波）。
+ * @param  DataStruct: 指向 MPU6050_Data_t 结构体的指针，用于存储结果
+ */
+void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct)
 {
-    uint8_t Rec_Data[14];
-    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, 1000);
-    DataStruct->Gyro_Z_RAW  = (int16_t)(Rec_Data[12] << 8 | Rec_Data[13]);
-    DataStruct->Gz = DataStruct->Gyro_Z_RAW / GYRO_SENSITIVITY;
-    double dt = (double)(HAL_GetTick() - timer) / 1000.0;
+    uint8_t Rec_Data[2]; // 优化点1: 只需要2个字节来存放Z轴陀螺仪数据
+
+    // --- 1. 高效读取数据 ---
+    // 只读取GYRO_Z的数据，而不是读取从加速度计开始的所有14个字节，大大减少I2C总线负担
+    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, GYRO_ZOUT_H_REG, 1, Rec_Data, 2, 100);
+
+    DataStruct->Gyro_Z_RAW = (int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
+
+    // --- 2. 使用 float 进行浮点运算 ---
+    // 在没有硬件双精度FPU的单片机上(如STM32F1)，float比double快得多
+    static uint32_t timer = 0; // 优化点2: 设为static，保证在函数调用间保持其值
+    float dt = (float)(HAL_GetTick() - timer) / 1000.0f;
     timer = HAL_GetTick();
-    double gz_calibrated = DataStruct->Gz - gz_bias;
-    // 使用校准后的Gz值进行积分
-    currentYaw += gz_calibrated * dt;
+
+    // 如果dt为0（调用间隔小于1ms），则不进行计算，防止除零或无效积分
+    if (dt <= 0) {
+        return;
+    }
+
+    // --- 3. 积分计算 Yaw 角 ---
+    // 将原始值转换为角速度 (单位: 度/秒)
+    DataStruct->Gz = (float)DataStruct->Gyro_Z_RAW / GYRO_SENSITIVITY;
+
+    // 减去零点漂移（偏置），这个gz_bias需要在设备静止时提前计算并标定
+    float gz_calibrated = DataStruct->Gz - gz_bias;
+
+    // 使用静态变量来累加角度值
+    static float currentYaw = 0.0f; // 优化点3: 设为static，保存积分结果
+    currentYaw += gz_calibrated * dt; // 欧拉积分
+
+    // 可以在这里将角度限制在 0-360 度或 -180~180 度范围内，防止无限增大
+    // fmodf 是 float 版本的求余函数
+    currentYaw = fmodf(currentYaw, 360.0f);
+
     DataStruct->YawAngle = currentYaw;
 
+    // --- 4. 清除数据就绪中断标志位 ---
+    // 读取中断状态寄存器可以清除中断标志，为下一次中断做准备
     uint8_t dummy;
-    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10); /* <<< 保证 INT 拉低 */
+    HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10);
 }
 
 /**

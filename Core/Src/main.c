@@ -41,7 +41,7 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define LineWalking_Switch 0 // 1:开启 LineWalking 模块，0:关闭 LineWalking 模块
-#define MPU6050_Switch 0 // 1:开启 MPU6050 模块，0:关闭 MPU6050 模块
+#define MPU6050_Switch 1 // 1:开启 MPU6050 模块，0:关闭 MPU6050 模块
 #define OLED_Switch 1 // 1:开启 OLED 模块，0:关闭 OLED 模块
 #define LineWalking_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
 
@@ -198,7 +198,7 @@ int main(void)
     }
     if (OLED_Switch) {
         OLED_Clear();
-        OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题[Debug]
+        OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题[Debug]
     }
 
   /* USER CODE END 2 */
@@ -206,7 +206,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
-        // OLED_Debug('L',1);                                               // OLED 显示 LineWalking 数据
+        OLED_Debug('N',1);                                               // OLED 显示 LineWalking 数据
         if (MPU6050_Switch) {
             Motion_SpinTaskUpdate(MPU6050_Data.YawAngle); // 是否不需要实时更新？内部有转弯判断
             if (mpu6050_data_ready_flag) {
@@ -218,7 +218,7 @@ int main(void)
             linewalking_data_ready_flag = 0;
             LineWalking(150); // 传感器数据处理
         }
-        Motion_Forward(200);
+
     }
 
     /* USER CODE END WHILE */

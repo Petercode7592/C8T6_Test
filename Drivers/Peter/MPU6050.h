@@ -16,6 +16,7 @@ extern I2C_HandleTypeDef hi2c1;
 #define GYRO_CONFIG_REG     0x1B
 #define INT_PIN_CFG_REG     0x37
 #define INT_ENABLE_REG      0x38
+#define GYRO_ZOUT_H_REG     0x47  // Z轴陀螺仪数据的高位寄存器地址
 #define INT_STATUS_REG      0x3A
 #define ACCEL_XOUT_H_REG    0x3B
 #define GYRO_XOUT_H_REG     0x43
