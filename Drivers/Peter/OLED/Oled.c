@@ -1,6 +1,6 @@
-#include "oled.h"
-#include "oledfont.h"
+#include "Oled.h"
 #include <math.h>
+#include "Oledfont.h"
 
 static I2C_HandleTypeDef *g_hi2c_oled = NULL;
 

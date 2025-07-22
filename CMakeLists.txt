@@ -42,10 +42,10 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/Peter/LineWalking.c
         Drivers/Peter/MPU6050.c
         Drivers/Peter/MPU6050.h
-        Drivers/Peter/oled.c
-        Drivers/Peter/oled.h
-        Drivers/Peter/oledfont.c
-        Drivers/Peter/oledfont.h
+        Drivers/Peter/OLED/Oled.c
+        Drivers/Peter/OLED/Oled.h
+        Drivers/Peter/OLED/Oledfont.c
+        Drivers/Peter/OLED/Oledfont.h
         Drivers/Peter/motion_control.c
         Drivers/Peter/motion_control.h
         Drivers/Peter/Global.h
