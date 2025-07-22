@@ -38,8 +38,8 @@ enable_language(C ASM)
 add_executable(${CMAKE_PROJECT_NAME}
         Drivers/Peter/Mdrv.h
         Drivers/Peter/Mdrv.c
-        Drivers/Peter/LineWalking.h
-        Drivers/Peter/LineWalking.c
+        Drivers/Peter/Four_LineWalking.c
+        Drivers/Peter/Four_LineWalking.h
         Drivers/Peter/MPU6050.c
         Drivers/Peter/MPU6050.h
         Drivers/Peter/OLED/Oled.c

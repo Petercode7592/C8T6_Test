@@ -25,11 +25,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "LineWalking.h"
+#include "Four_LineWalking.h"
 #include "MDrv.h"
 #include "MPU6050.h" // 闁告牕鎳庨幆鍦U6050婵☆垪鈧櫕鍋?#10;#include "Oled.h"
 #include "motion_control.h"
 #include "string.h"
+#include "OLED/Oled.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,7 +40,7 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define LineWalking_Switch 0 // 1:开启 LineWalking 模块，0:关闭 LineWalking 模块
+#define LineWalking_Switch 1 // 1:开启 LineWalking 模块，0:关闭 LineWalking 模块
 #define MPU6050_Switch 1 // 1:开启 MPU6050 模块，0:关闭 MPU6050 模块
 #define OLED_Switch 1 // 1:开启 OLED 模块，0:关闭 OLED 模块
 #define LineWalking_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
@@ -105,7 +106,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 //
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     // 这个回调函数会在接收到数据时被调用
-    if (huart->Instance == UMUART_Cfg.Instance) {
+      if (huart->Instance == UMUART_Cfg.Instance) {
         UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
         Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
         HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 继续接收字节
@@ -178,14 +179,16 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
+
     MDrv_Init(1); // 初始化驱动板
-    MDrv_ReadVol(); // 读取电池电压
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收,要在初始化驱动板前才能接收电池数据
+    HAL_Delay(200);
+    MDrv_ReadVol(); // 读取电池电压
+    HAL_Delay(200);
     MDrv_UploadData(0,0,1);
 
     if (OLED_Switch)
         OLED_Init(&hi2c2);
-
 
     if (MPU6050_Switch && !MPU6050_Init(&hi2c1)) { // 初始化MPU6050
         HAL_Delay(750);
@@ -195,6 +198,7 @@ int main(void)
         OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8);
         HAL_Delay(1500);
     }
+
     if (OLED_Switch) {
         OLED_Clear();
         OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题[Debug]
@@ -205,21 +209,19 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
-        OLED_Debug('N',1);                                               // OLED 显示 LineWalking 数据
+        OLED_Debug('N',1);                            // OLED 显示 LineWalking 数据
         if (MPU6050_Switch) {
-            Motion_SpinTaskUpdate(MPU6050_Data.YawAngle); // 是否不需要实时更新？内部有转弯判断
+            Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);       // 是否不需要实时更新？内部有转弯判断
             if (mpu6050_data_ready_flag) {
                 mpu6050_data_ready_flag = 0;
-                MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
+                MPU6050_Get_Angle_yaw(&MPU6050_Data);           // 获取陀螺仪数据
             }
         }
         if (LineWalking_Switch && linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;
             LineWalking(150); // 传感器数据处理
         }
-
     }
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

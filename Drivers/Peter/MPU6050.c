@@ -130,11 +130,6 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
 }
 
 /**
- * @brief 获取 MPU6050 的偏航角（Yaw）
- * @param DataStruct 指向 MPU6050_Data_t 结构体的指针
- * @note 此函数会读取陀螺仪 Z 轴数据并计算偏航角
- */
-/**
  * @brief  通过积分Z轴陀螺仪数据来计算偏航角(Yaw)
  * @note   这个函数必须被周期性地、高频率地调用 (例如每 5-20ms 一次) 才能保证精度。
  * 这个方法存在固有的积分漂移，长时间运行后角度会不准确。

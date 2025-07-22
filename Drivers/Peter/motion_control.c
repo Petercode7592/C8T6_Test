@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "Global.h" // 鍋囪鏈変竴涓狹PU6050妯″潡鏉ヨ幏鍙栧綋鍓嶈搴?#10;#include "MDrv.h" // MDrv_SetSpeed(m1, m2, m3, m4)
+#include "MDrv.h"
 #include "main.h"
 
 #define PI 3.1415926f
