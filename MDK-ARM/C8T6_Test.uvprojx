@@ -770,9 +770,9 @@
           <GroupName>New Group</GroupName>
           <Files>
             <File>
-              <FileName>Mdrv.c</FileName>
+              <FileName>MDrv.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Drivers\YYFDrive\Mdrv.c</FilePath>
+              <FilePath>..\Drivers\YYFDrive\MDrv.c</FilePath>
             </File>
             <File>
               <FileName>Mdrv.h</FileName>

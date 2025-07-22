@@ -1,9 +1,8 @@
 #include "motion_control.h"
-#include "Mdrv.h"  // MDrv_SetSpeed(m1, m2, m3, m4)
 #include <math.h>
 #include <stdlib.h>
+#include "Global.h" // 鍋囪鏈変竴涓狹PU6050妯″潡鏉ヨ幏鍙栧綋鍓嶈搴?#10;#include "MDrv.h" // MDrv_SetSpeed(m1, m2, m3, m4)
 #include "main.h"
-#include "Global.h"  // 假设有一个MPU6050模块来获取当前角度
 
 #define PI 3.1415926f
 #define GAIN 0.4f
@@ -36,20 +35,25 @@ static  const float DEG_TO_RAD = PI / 180.0f; // 角度转弧度的常数
  */
 void Motion_Forward(int16_t speed)
 {
-    if (speed != 0)
+    if (speed < 0)
+        return;
+    else if (speed != 0)
         spd_fwd = speed;
     MDrv_SetSpeed(spd_fwd, spd_fwd, spd_fwd, spd_fwd);
 }
 
 /**
  * @brief 小车后退(失速)
- * @param speed 线速度，单位 mm/s，为 0 时使用上一次速度
+ * @param speed >0,线速度，单位 mm/s，为 0 时使用上一次速度
  * @note ！小车后退速度过高会车轮失速,并且后退时四轮速度不等
  */
 void Motion_Backward(int16_t speed)
 {
-    if (speed != 0)
+    if (speed < 0)
+        return;
+    else if (speed != 0)
         spd_fwd = speed;
+
     MDrv_SetSpeed(-spd_fwd, -spd_fwd, -spd_fwd, -spd_fwd);
 }
 

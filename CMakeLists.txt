@@ -36,19 +36,19 @@ enable_language(C ASM)
 
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
-        Drivers/YYFDrive/Mdrv.h
-        Drivers/YYFDrive/Mdrv.c
-        Drivers/YYFDrive/LineWalking.h
-        Drivers/YYFDrive/LineWalking.c
-        Drivers/YYFDrive/MPU6050.c
-        Drivers/YYFDrive/MPU6050.h
-        Drivers/YYFDrive/oled.c
-        Drivers/YYFDrive/oled.h
-        Drivers/YYFDrive/oledfont.c
-        Drivers/YYFDrive/oledfont.h
-        Drivers/YYFDrive/motion_control.c
-        Drivers/YYFDrive/motion_control.h
-        Drivers/YYFDrive/Global.h
+        Drivers/Peter/Mdrv.h
+        Drivers/Peter/Mdrv.c
+        Drivers/Peter/LineWalking.h
+        Drivers/Peter/LineWalking.c
+        Drivers/Peter/MPU6050.c
+        Drivers/Peter/MPU6050.h
+        Drivers/Peter/oled.c
+        Drivers/Peter/oled.h
+        Drivers/Peter/oledfont.c
+        Drivers/Peter/oledfont.h
+        Drivers/Peter/motion_control.c
+        Drivers/Peter/motion_control.h
+        Drivers/Peter/Global.h
 )
 
 # Add STM32CubeMX generated sources
@@ -67,7 +67,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-        Drivers/YYFDrive
+        Drivers/Peter
 )
 
 # Add project symbols (macros)

@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -25,12 +25,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "Mdrv.h"
-#include "string.h"
-#include "MPU6050.h" // 包含MPU6050模块
-#include "oled.h"
 #include "LineWalking.h"
+#include "MDrv.h"
+#include "MPU6050.h" // 閸栧懎鎯圡PU6050濡€虫健
 #include "motion_control.h"
+#include "oled.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,8 +40,9 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define LineWalking_Switch 1 // 1:开启 LineWalking 模块，0:关闭 LineWalking 模块
-#define MPU6050_Switch 1 // 1:开启 MPU6050 模块，0:关闭 MPU6050 模块
+#define LineWalking_Switch 0 // 1:开启 LineWalking 模块，0:关闭 LineWalking 模块
+#define MPU6050_Switch 0 // 1:开启 MPU6050 模块，0:关闭 MPU6050 模块
+#define OLED_Switch 1 // 1:开启 OLED 模块，0:关闭 OLED 模块
 #define LineWalking_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
 
 /* USER CODE END PD */
@@ -55,11 +56,9 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 
 /* USER CODE BEGIN PV */
 // volatile 代表变量可能会被中断或其他线程修改，防止编译器优化
-extern volatile uint8_t mpu6050_data_ready_flag = 0;
-extern volatile uint8_t linewalking_data_ready_flag = 1;            // 让其先触发一次
-uint8_t LineWalking_Data = 0;                                       // 初始值判断
-uint8_t LineWalking_First = 1;                                     // LineWalking 模块开关
-uint8_t UsrtDataBuff[500];                                          // 用于接收串口的数据
+volatile uint8_t mpu6050_data_ready_flag = 0;
+volatile uint8_t linewalking_data_ready_flag = 1; // 让其先触发一次
+uint8_t UsrtDataBuff[500]; // 用于接收串口的数据
 
 /* USER CODE END PV */
 
@@ -86,42 +85,33 @@ void Uart_JudgeDataType(char *Udata) {
 }
 
 /**
-  * @brief GPIO中断回调函数
-  * @param pin: 中断引脚
-  * @retval None
-  */
+ * @brief GPIO中断回调函数
+ * @param pin: 中断引脚
+ * @retval None
+ */
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
-    if (pin == GPIO_PIN_9 && MPU6050_Switch) { // PB9 – MPU INT
+    if (MPU6050_Switch && pin == GPIO_PIN_9) { // PB9 – MPU INT
         mpu6050_data_ready_flag = 1;
-    } /* PB9 – MPU INT */
-    else if (pin & LineWalking_Pin) {
-        if (LineWalking_Switch) {
-            // 处理 LineWalking 模块的中断
-            LineWalking_Data = GetLineWalking();
-            linewalking_data_ready_flag = 1;
-            if (LineWalking_Data != 0 || LineWalking_Data != 15)
-                Motion_AbortSpin();  // 中断时设定取消旋转
-        }
+    } else if (LineWalking_Switch && (pin & LineWalking_Pin)) { /* PB9 – MPU INT */
+        linewalking_data_ready_flag = 1;
     }
 }
 
 /**
-  * @brief UART接收完成回调函数
-  * @param huart: UART句柄
-  * @retval None
-  * @note 空闲中断+DMA 这里不要听信代码建议加 const
-  */
+ * @brief UART接收完成回调函数
+ * @param huart: UART句柄
+ * @retval None
+ * @note 空闲中断+DMA 这里不要听信代码建议加 const
+ */
 //
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     // 这个回调函数会在接收到数据时被调用
     if (huart->Instance == UMUART_Cfg.Instance) {
-        UsrtDataBuff[Size-1] = '\0'; // 确保字符串结束
+        UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
         Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
-        strcpy(UsrtDataBuff, ""); // 清空接收缓冲区
         HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 继续接收字节
     }
 }
-
 
 void OLED_Debug(char mode, uint8_t showtype) {
     if (mode == 'N') {
@@ -145,10 +135,10 @@ void OLED_Debug(char mode, uint8_t showtype) {
             OLED_ShowString(1, 1, "L2 L1 R1 R2", 8);
         } else if (showtype == 1) {
             // 显示 LineWalking 数据
-            OLED_ShowNum(1,2,(LineWalking_Data >> 3) & 0x01, 1,8);
-            OLED_ShowNum(18,2,(LineWalking_Data >> 2) & 0x01, 1,8);
-            OLED_ShowNum(36,2,(LineWalking_Data >> 1) & 0x01, 1,8);
-            OLED_ShowNum(54,2,(LineWalking_Data >> 0) & 0x01, 1,8);
+            // OLED_ShowNum(1,2,((LineWalking_Data >> 3) & 0x01), 1,8);
+            // OLED_ShowNum(18,2,((LineWalking_Data >> 2) & 0x01), 1,8);
+            // OLED_ShowNum(36,2,((LineWalking_Data >> 1) & 0x01), 1,8);
+            // OLED_ShowNum(54,2,((LineWalking_Data >> 0) & 0x01), 1,8);
         }
     }
 }
@@ -190,42 +180,45 @@ int main(void)
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
     MDrv_Init(1); // 初始化驱动板
-    OLED_Init(&hi2c2);
-    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收，接收字节
+    MDrv_ReadVol(); // 读取电池电压
+    HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收,要在初始化驱动板前才能接收电池数据
+    MDrv_UploadData(0,0,1);
 
-    OLED_ShowString(1, 1, "MPU6050 Init....", 8);
-    if (MPU6050_Init(&hi2c1)) { // 初始化MPU6050
-        OLED_ShowString(1,2, "MPU6050 Err!", 8);
+    if (OLED_Switch)
+        OLED_Init(&hi2c2);
+
+
+    if (MPU6050_Switch && !MPU6050_Init(&hi2c1)) { // 初始化MPU6050
+        HAL_Delay(750);
+        OLED_ShowString(1, 1, "MPU6050 Init....", 8);
+        MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
+    } else {
+        OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8);
         HAL_Delay(1500);
     }
-    else {
-        HAL_Delay(750);
-        MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
+    if (OLED_Switch) {
+        OLED_Clear();
+        OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题[Debug]
     }
-    OLED_Clear();
-    HAL_Delay(200);
-    // OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题
-    Mdrv_UploadData(0, 0, 1); // 上传MSPD到MCU
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
-        Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);                       // 是否不需要实时更新？内部有转弯判断
-        // OLED_Debug('N',1);                                     // OLED 显示 LineWalking 数据
-        if (mpu6050_data_ready_flag && MPU6050_Switch) {
-            mpu6050_data_ready_flag = 0;
-            MPU6050_Get_Angle_yaw(&MPU6050_Data);                           // 获取陀螺仪数据
-        }
-        if (linewalking_data_ready_flag && LineWalking_Switch) {
-            linewalking_data_ready_flag = 0;
-            if (LineWalking_First) {
-                LineWalking_Data = GetLineWalking();
-                LineWalking_First = 0; // 只在第一次获取数据时执行
+        // OLED_Debug('L',1);                                               // OLED 显示 LineWalking 数据
+        if (MPU6050_Switch) {
+            Motion_SpinTaskUpdate(MPU6050_Data.YawAngle); // 是否不需要实时更新？内部有转弯判断
+            if (mpu6050_data_ready_flag) {
+                mpu6050_data_ready_flag = 0;
+                MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
             }
-            LineWalking(LineWalking_Data, 150);                       // 传感器数据处理
         }
+        if (LineWalking_Switch && linewalking_data_ready_flag) {
+            linewalking_data_ready_flag = 0;
+            LineWalking(150); // 传感器数据处理
+        }
+        Motion_Forward(200);
     }
 
     /* USER CODE END WHILE */
@@ -303,8 +296,8 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    /* User can add his own implementation to report the file name and line number,
+       ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

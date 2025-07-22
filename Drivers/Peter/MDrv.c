@@ -1,11 +1,11 @@
 //
 // Created by Petercode on 25-7-9.
 //
-#include "Mdrv.h"
+#include "MDrv.h"
+#include <stdlib.h> // atof
 #include "stdio.h"
 #include "string.h" // strlen
 #include "usart.h"
-#include <stdlib.h> // atof
 
 /**
  * M1 -> 左上电机（小车的左前轮）
@@ -44,7 +44,7 @@ HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype) {
   * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.配置电机霍尔编码器的相位为13线
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef Mdrv_SetMline(uint8_t mline) {
+HAL_StatusTypeDef MDrv_SetMline(uint8_t mline) {
     char cmd[25];
     snprintf(cmd, sizeof(cmd), "$mline:%d#\r\n", mline); // 发送指令
     return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
@@ -56,7 +56,7 @@ HAL_StatusTypeDef Mdrv_SetMline(uint8_t mline) {
   * @note 带编码器电机来说:此值对于控制速度起主要作用，此值需要正确.固件默认值30
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef Mdrv_SetMphase(uint8_t mphase) {
+HAL_StatusTypeDef MDrv_SetMphase(uint8_t mphase) {
     char cmd[25];
     snprintf(cmd, sizeof(cmd), "$mphase:%d#\r\n", mphase); // 发送指令
     return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
@@ -148,7 +148,7 @@ HAL_StatusTypeDef MDrv_SetPWM(int32_t pwm1, int32_t pwm2, int32_t pwm3, int32_t 
   * @note mall, mtep, mspd分别为0或1，1代表回传该部分的数据
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef Mdrv_UploadData(uint8_t mall_en,  uint8_t mtep_en, uint8_t mspd_en) {
+HAL_StatusTypeDef MDrv_UploadData(uint8_t mall_en,  uint8_t mtep_en, uint8_t mspd_en) {
     // 发送上传数据指令
     // 假设mall, mtep, mspd是需要上传的数据 相应变量赋值1代表回传该部分的数据
     char cmd[50];
@@ -235,8 +235,8 @@ void MDrv_ProcessVol(char *data) {
   * @note 发送指令 "$read_vol#" 仅发送不解析数据
   * @retval void
   */
-void Mdrv_ReadVol() {
-    HAL_UART_Transmit(&UMUART_Cfg, "$read_vol#\r\n", 13, Uart_MaxWait);
+void MDrv_ReadVol() {
+    HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$read_vol#\r\n", 13, Uart_MaxWait);
 }
 
 /**
@@ -254,20 +254,18 @@ void MDrv_Init(int mode) {
     if (mode == 0) {
         MDrv_SetMtype(2); // 设置为310电机
         HAL_Delay(125);
-        Mdrv_SetMline(13); // 设置电机的相位线
+        MDrv_SetMline(13); // 设置电机的相位线
         HAL_Delay(125);
-        Mdrv_SetMphase(20); // 设置电机的减速比
+        MDrv_SetMphase(20); // 设置电机的减速比
         HAL_Delay(125);
         MDrv_SetWdiameter(48); // 设置车轮直径
         HAL_Delay(125);
         MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
         HAL_Delay(125);
     }
-
     // MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
     MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
-    HAL_Delay(95);
-    // Mdrv_ReadVol();
+    HAL_Delay(105);
 }
 
 uint32_t Mdrv_ReadMALL(int8_t MX) {

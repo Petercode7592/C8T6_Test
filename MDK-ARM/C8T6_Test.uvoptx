@@ -483,8 +483,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\Drivers\YYFDrive\Mdrv.c</PathWithFileName>
-      <FilenameWithoutPath>Mdrv.c</FilenameWithoutPath>
+      <PathWithFileName>..\Drivers\YYFDrive\MDrv.c</PathWithFileName>
+      <FilenameWithoutPath>MDrv.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
