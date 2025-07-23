@@ -42,13 +42,15 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/Peter/Four_LineWalking.h
         Drivers/Peter/MPU6050.c
         Drivers/Peter/MPU6050.h
-        Drivers/Peter/OLED/Oled.c
-        Drivers/Peter/OLED/Oled.h
-        Drivers/Peter/OLED/Oledfont.c
-        Drivers/Peter/OLED/Oledfont.h
+        Drivers/Peter/Display/OLED/Oled.c
+        Drivers/Peter/Display/OLED/Oled.h
+        Drivers/Peter/Display/OLED/Oledfont.c
+        Drivers/Peter/Display/OLED/Oledfont.h
         Drivers/Peter/motion_control.c
         Drivers/Peter/motion_control.h
         Drivers/Peter/Global.h
+        Drivers/Peter/Display/LED/LED.c
+        Drivers/Peter/Display/LED/LED.h
 )
 
 # Add STM32CubeMX generated sources

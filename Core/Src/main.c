@@ -73,14 +73,16 @@ void SystemClock_Config(void);
 
 void Uart_JudgeDataType(char *Udata) {
     HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *) Udata, strlen(Udata), Uart_MaxWait);
-    if (strncmp(Udata, "$MAll:", 6) == 0) {
-        MDrv_ProcessMALL(Udata + 6);
-    } else if (strncmp(Udata, "$MTEP:", 6) == 0) {
-        MDrv_ProcessMTEP(Udata + 6);
-    } else if (strncmp(Udata, "$MSPD:", 6) == 0) {
-        MDrv_ProcessMSPD(Udata + 6);
-    } else if (strncmp(Udata, "$Battery:", 9) == 0) {
-        MDrv_ProcessVol(Udata + 9);
+    if (strncmp(Udata,"$",1) == 0) {
+        if (strncmp(Udata, "$MAll:", 6) == 0) {
+            MDrv_ProcessMALL(Udata + 6);
+        } else if (strncmp(Udata, "$MTEP:", 6) == 0) {
+            MDrv_ProcessMTEP(Udata + 6);
+        } else if (strncmp(Udata, "$MSPD:", 6) == 0) {
+            MDrv_ProcessMSPD(Udata + 6);
+        } else if (strncmp(Udata, "$Battery:", 9) == 0) {
+            MDrv_ProcessVol(Udata + 9);
+        }
     }
 }
 
@@ -108,7 +110,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     // 这个回调函数会在接收到数据时被调用
       if (huart->Instance == UMUART_Cfg.Instance) {
         UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
-        Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
+        // Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
         HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 继续接收字节
     }
 }
@@ -122,10 +124,10 @@ void OLED_Debug(char mode, uint8_t showtype) {
         } else if (showtype == 1) {
             OLED_ShowFloat(1, 2, MPU6050_Data.Gz, 3, 2, 8);
             OLED_ShowFloat(1, 3, MPU6050_Data.YawAngle, 3, 2, 8);
-            OLED_ShowFloat(40, 2, Mdrv_Readspeed(0), 3, 2, 8);
-            OLED_ShowFloat(40, 3, Mdrv_Readspeed(1), 3, 2, 8);
-            OLED_ShowFloat(40, 4, Mdrv_Readspeed(2), 3, 2, 8);
-            OLED_ShowFloat(40, 5, Mdrv_Readspeed(3), 3, 2, 8);
+            OLED_ShowFloat(48, 2, Mdrv_Readspeed(0), 3, 2, 8);
+            OLED_ShowFloat(48, 3, Mdrv_Readspeed(1), 3, 2, 8);
+            OLED_ShowFloat(48, 4, Mdrv_Readspeed(2), 3, 2, 8);
+            OLED_ShowFloat(48, 5, Mdrv_Readspeed(3), 3, 2, 8);
             OLED_ShowFloat(80, 7, Voltage, 1, 2, 8);
         }
     } else if (mode == 'L') {
@@ -180,7 +182,7 @@ int main(void)
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 
-    MDrv_Init(1); // 初始化驱动板
+    MDrv_Init(0); // 初始化驱动板
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收,要在初始化驱动板前才能接收电池数据
     HAL_Delay(200);
     MDrv_ReadVol(); // 读取电池电压
@@ -211,11 +213,11 @@ int main(void)
     while (1) {
         OLED_Debug('N',1);                            // OLED 显示 LineWalking 数据
         if (MPU6050_Switch) {
-            Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);       // 是否不需要实时更新？内部有转弯判断
             if (mpu6050_data_ready_flag) {
                 mpu6050_data_ready_flag = 0;
                 MPU6050_Get_Angle_yaw(&MPU6050_Data);           // 获取陀螺仪数据
             }
+            // Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);       // 是否不需要实时更新？内部有转弯判断
         }
         if (LineWalking_Switch && linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;

@@ -12,7 +12,6 @@ extern uint32_t mall[4];
 extern uint16_t mtep[4];
 
 extern float v[4];
-extern int32_t vstd[4]; // 标准速度
 extern float Voltage; // 电池电压
 
 HAL_StatusTypeDef MDrv_Reset();

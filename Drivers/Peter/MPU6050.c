@@ -58,7 +58,7 @@ void MPU6050_Calibrate_Gyro(void)
     int i;
 
     // 读取2000次数据进行平均
-    const int num_samples = 2000;
+    const int num_samples = 1500;
     for (i = 0; i < num_samples; i++)
     {
         HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, GYRO_XOUT_H_REG, 1, Rec_Data, 6, 1000);

@@ -16,7 +16,6 @@
 uint32_t mall[4] = {0};
 uint16_t mtep[4] = {0};
 float v[4] = {0}; // 速度数组
-int32_t vstd[4]; // 标准速度
 float Voltage = 0.0f; // 电池电压
 
 
@@ -117,12 +116,17 @@ HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t V
         1000) {
         return HAL_ERROR; // 错误处理，速度值超出范围
     }
-    snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
-    vstd[0] = Vm1; // 更新全局速度数组
-    vstd[1] = Vm2;
-    vstd[2] = Vm3;
-    vstd[3] = Vm4;
-    return HAL_UART_Transmit(&UMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
+
+    int cmd_len = snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
+
+    // 健壮性检查：检查 snprintf 是否成功并且没有截断
+    if (cmd_len < 0 || cmd_len >= sizeof(cmd)) {
+        // cmd_len < 0: 编码错误
+        // cmd_len >= sizeof(cmd): 缓冲区太小，输出被截断
+        return HAL_ERROR;
+    }
+
+    return HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)cmd, cmd_len, Uart_MaxWait);
 }
 
 /**

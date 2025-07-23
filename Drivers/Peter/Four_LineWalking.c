@@ -33,16 +33,20 @@ void LineWalking(int16_t speed) {
 
     int8_t current_state = (L2 << 3) | (L1 << 2) | (R1 << 1) | (R2 << 0);
 
+    if (last_state == current_state) {
+        return;
+    }
+
     if (L2 && !L1 && !R1 && R2) { // 状态: [1, 0, 0, 1] -> 最理想状态，车身居中
         Motion_Forward(speed);
         last_deviation = 0;
     }
     else if (L2 && L1 && !R1 && R2) { // 状态: [1, 1, 0, 1] -> 车身偏左，向右微调
-        Motion_RightTurnByAngdps(speed, 1);
+        Motion_RightTurnByAngdps(TURN_BASE_SPEED, 1);
         last_deviation = 1; // 记录向右偏
     }
     else if (L2 && !L1 && R1 && R2) { // 状态: [1, 0, 1, 1] -> 车身偏右，向左微调
-        Motion_LeftTurnByAngdps(speed, 1);
+        Motion_LeftTurnByAngdps(TURN_BASE_SPEED, 1);
         last_deviation = -1; // 记录向左偏
     }
     else if (!L2 && !L1 && R1 && R2) { // 状态: [0, 0, 1, 1] -> 车身严重偏右，向左大角度转弯
@@ -60,16 +64,13 @@ void LineWalking(int16_t speed) {
             last_deviation = 0; // 重置偏移状态
         }else if (last_deviation == 0) {
             // 如果上次是居中
-            Motion_SetLR_Speed(0.5*speed,1.5 * speed);
-            // Motion_Spin(-100); // 向左转找回黑线
+            Motion_Spin(-100); // 向左转找回黑线
         }else if (last_deviation == -1) {
             // 如果上次是向左偏
-            Motion_SetLR_Speed(1.5 * speed, 0.5*speed);
-            // Motion_Spin(100); // 向右转找回黑线
+            Motion_Spin(100); // 向右转找回黑线
         }else {
             // 如果上次是向右偏
-            // Motion_Spin(-100); // 向左转找回黑线
-            Motion_SetLR_Speed(0.5*speed,1.5 * speed);
+            Motion_Spin(-100); // 向左转找回黑线
         }
     }
     else if (!L2 && !L1 && !R1 && !R2) { // 状态: [0, 0, 0, 0]
@@ -81,22 +82,19 @@ void LineWalking(int16_t speed) {
             // 很可能是遇到了左侧的直角弯，或需要向左找线
             Motion_Spin(RotSpeed); // 向左转找回黑线
         } else {
-            Motion_Backward(speed/2); // 如果状态异常，后退一段距离
+            Motion_Backward(speed); // 如果状态异常，后退一段距离
         }
     }
     else if (!L2) { // 状态: [0, x, x, x] -> 最左侧传感器压线，左急转
-        Motion_RightTurnByAngdps(speed,2);
+        Motion_LeftTurnByAngdps(TURN_BASE_SPEED,5);
         // Motion_Spin(RotSpeed); // 正值左转
         last_deviation = -1;
     }
     else if (!R2) { // 状态: [x, x, x, 0] -> 最右侧传感器压线，右急转
-        Motion_LeftTurnByRadius(speed,2);
+        Motion_RightTurnByRadius(TURN_BASE_SPEED,5);
         // Motion_Spin(-RotSpeed); // 负值右转
         last_deviation = 1;
     }
 
-    if (current_state == last_state) {
-        return; // 如果状态没有变化，直接返回，避免重复发送电机指令
-    }
     last_state = current_state; // 更新状态
 }
