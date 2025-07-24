@@ -50,6 +50,26 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(Track8_AD2_GPIO_Port, Track8_AD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, Track8_AD0_Pin|Track8_AD1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : Track8_AD2_Pin */
+  GPIO_InitStruct.Pin = Track8_AD2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(Track8_AD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Track8_AD0_Pin Track8_AD1_Pin */
+  GPIO_InitStruct.Pin = Track8_AD0_Pin|Track8_AD1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pins : Track_L2X1_Pin Track_L1X2_Pin Track_R1X3_Pin Track_R2X4_Pin */
   GPIO_InitStruct.Pin = Track_L2X1_Pin|Track_L1X2_Pin|Track_R1X3_Pin|Track_R2X4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;

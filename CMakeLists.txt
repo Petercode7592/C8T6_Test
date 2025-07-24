@@ -51,6 +51,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/Peter/Global.h
         Drivers/Peter/Display/LED/LED.c
         Drivers/Peter/Display/LED/LED.h
+        Drivers/Peter/Ganv_Grayscale_Sensor.c
+        Drivers/Peter/Ganv_Grayscale_Sensor_Config.h
 )
 
 # Add STM32CubeMX generated sources
