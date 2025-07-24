@@ -195,10 +195,10 @@ void MDrv_ProcessMSPD(char *data) {
     // 期望格式："608.99,618.65,637.98,637.98#\r\n"
     char *ptr = data;
     char temp[16];
-    int i = 0;
+    uint16_t i = 0;
 
     while (i < 4 && *ptr != '\0') {
-        int j = 0;
+        uint16_t j = 0;
 
         // 提取当前字段数字，直到逗号或结束符
         while ((*ptr >= '0' && *ptr <= '9') || *ptr == '.' || *ptr == '-') {
@@ -220,7 +220,7 @@ void MDrv_ProcessMSPD(char *data) {
 void MDrv_ProcessVol(char *data) {
     // data 示例："5.12V#\r\n"
     char temp[16] = {0};
-    int i = 0;
+    uint16_t i = 0;
 
     // 提取数字字符直到遇到非数字/小数点（如 'V' 或 '#'）
     while ((*data >= '0' && *data <= '9') || *data == '.' || *data == '-') {

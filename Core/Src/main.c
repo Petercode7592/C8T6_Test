@@ -30,9 +30,11 @@
 #include "Four_LineWalking.h"
 #include "Ganv_Grayscale_Sensor_Config.h"
 #include "MDrv.h"
-#include "MPU6050.h" // 闂佸憡鐗曢幊搴ㄥ箚閸︻摉U6050濠碘槅鍨埀顒冩珪閸?#10;#include "Oled.h"
+#include "MPU6050.h"
 #include "motion_control.h"
 #include "string.h"
+#include "Eight_LineWalking.h"
+#include "PID.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,8 +45,8 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define Tracking4_Switch 0 // 1:开启 四路巡线 模块，0:关闭 LineWalking 模块
-#define Tracking8_Switch 0 // 1:开启 八路巡线 模块，0:关闭 Tracking8 模块
-#define MPU6050_Switch 1 // 1:开启 MPU6050 模块，0:关闭 MPU6050 模块
+#define Tracking8_Switch 1 // 1:开启 八路巡线 模块，0:关闭 Tracking8 模块
+#define MPU6050_Switch 0 // 1:开启 MPU6050 模块，0:关闭 MPU6050 模块
 #define OLED_Switch 1 // 1:开启 OLED 模块，0:关闭 OLED 模块
 #define LineWalking_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
 
@@ -116,7 +118,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     // 这个回调函数会在接收到数据时被调用
       if (huart->Instance == UMUART_Cfg.Instance) {
         UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
-        // Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
+        Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
         HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 继续接收字节
     }
 }
@@ -199,6 +201,8 @@ int main(void)
     HAL_Delay(200);
     MDrv_UploadData(0,0,1);
 
+    LineWalking_Init();  // 初始化 PID 控制器
+
     if (OLED_Switch)
         OLED_Init(&hi2c2);
 
@@ -221,9 +225,12 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
+
         No_Mcu_Ganv_Sensor_Task_Without_tick(&track_sensor);
         track_digtal = track_sensor.Digtal; // 获取数字跟踪传感器数据
-        OLED_Debug('L',1);                            // OLED 显示 LineWalking 数据
+        LineWalking_Track(track_digtal, 100);
+        // OLED_Debug('L',1);                            // OLED 显示 LineWalking 数据
+        // HAL_Delay(20);
         if (MPU6050_Switch) {
             if (mpu6050_data_ready_flag) {
                 mpu6050_data_ready_flag = 0;
