@@ -219,6 +219,7 @@ int main(void)
         OLED_Clear();
         OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题[Debug]
     }
+    Motion_Forward(200);
 
   /* USER CODE END 2 */
 
@@ -226,10 +227,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     while (1) {
 
-        No_Mcu_Ganv_Sensor_Task_Without_tick(&track_sensor);
-        track_digtal = track_sensor.Digtal; // 获取数字跟踪传感器数据
-        LineWalking_Track(track_digtal, 100);
-        // OLED_Debug('L',1);                            // OLED 显示 LineWalking 数据
+        // No_Mcu_Ganv_Sensor_Task_Without_tick(&track_sensor);
+        // track_digtal = track_sensor.Digtal; // 获取数字跟踪传感器数据
+        // LineWalking_Track(track_digtal, 200);
+        OLED_Debug('L',1);                            // OLED 显示 LineWalking 数据
         // HAL_Delay(20);
         if (MPU6050_Switch) {
             if (mpu6050_data_ready_flag) {

@@ -2,6 +2,7 @@
 #define EIGHT_LINEWALKING_H
 
 #include <stdint.h>
+#include "stm32f1xx_hal.h" // 不能删除
 
 // 初始化循迹PID控制器
 void LineWalking_Init(void);

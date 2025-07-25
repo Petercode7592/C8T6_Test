@@ -2,18 +2,18 @@
 #include "Eight_LineWalking.h"
 #include "PID.h"
 #include "motion_control.h"
-#include "stm32f1xx_hal_uart.h"
-#include "usart.h"
+#include "Display/OLED/Oled.h"
 
-// 权重表：-35 ~ +35（代表偏离中心的程度）
-static const int8_t sensor_weight[8] = {-35, -25, -15, -5, 5, 15, 25, 35};
+// 权重表：中线为负，越靠外权重越大（正负对称）
+static const int8_t sensor_weight[8] = {40, 25, 15, 5, -5, -15, -25, -40};
 static PID_Controller line_pid;
+static int16_t last_valid_error = 0; // 用于掉线方向记忆
 
 /**
  * @brief 初始化PID控制器（用于循迹）
  */
 void LineWalking_Init(void) {
-    PID_Init(&line_pid, 2.0f, 0.0f, 4.5f); // 使用PD控制：Ki=0
+    PID_Init(&line_pid, 4.0f, 0.0f, 8.0f); // 使用PD控制
 
     // 启用积分限幅（防止积分过大）
     line_pid.enable_limit = 1;
@@ -28,6 +28,7 @@ void LineWalking_Init(void) {
 
 /**
  * @brief 计算循迹误差
+ * @note 传入 191 = 1011 1111b ((track >> 6) & 0x01) 为 0 意味黑线
  */
 static int16_t Calculate_Track_Error(uint8_t track_digital) {
     int sum = 0;
@@ -38,7 +39,9 @@ static int16_t Calculate_Track_Error(uint8_t track_digital) {
             count++;
         }
     }
-    if (count == 0) return 0; // 掉线处理（可自定义）
+    if (count == 0) {
+        return 0; // 掉线应在上层处理，这里兜底返回0
+    }
     return sum / count;
 }
 
@@ -48,12 +51,31 @@ static int16_t Calculate_Track_Error(uint8_t track_digital) {
  * @param speed 直行速度
  */
 void LineWalking_Track(uint8_t track_digital, int16_t speed) {
-    int16_t error = Calculate_Track_Error(track_digital);
-    int16_t correction = PID_Compute(&line_pid, error);
-    // HAL_UART_Transmit(&huart1, (uint8_t*)&error, sizeof(error), 100); // 调试输出误差
-    int16_t base_speed = speed; // mm/s，基础速度可调
-    int16_t left_speed = base_speed - correction;
-    int16_t right_speed = base_speed + correction;
+    // 启动掉线恢复任务（全为1表示所有都是白线）
+    static uint8_t last_digital = 0xFF; // 记录上一帧原始传感器数据
 
-    Motion_SetLR_Speed(left_speed, right_speed);
+    // 掉线处理：全白时根据 last_digital 判断是否刚刚发生跳变
+    if (track_digital == 0xFF) {
+        if (last_digital != 0xFF) {
+            // 掉线前有信息，触发带方向的找线逻辑
+            Motion_Spin((last_valid_error >= 0) ? 150 : -150);
+        }
+        // 掉线后不再处理，等待下一次有效数据
+        return;
+    }
+
+    // 若未掉线，先确保中止掉线任务
+    Motion_AbortSpin();
+
+    // 更新上一帧有效数据
+    last_digital = track_digital;
+
+
+    int16_t error = Calculate_Track_Error(track_digital);
+    last_valid_error = error;
+
+    int16_t correction = PID_Compute(&line_pid, error);
+    OLED_ShowSignedNum(1,1, error, 4, 8); // 显示误差值
+    OLED_ShowSignedNum(1,4, correction, 4, 8); // 显示修正值
+    Motion_SetLR_Speed(speed + correction, speed - correction);
 }
