@@ -93,7 +93,8 @@ HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
   * @param p 比例系数
   * @param i 积分系数
   * @param d 微分系数
-  * @note 注意使用 printf 搭配 %f 需要额外进行库的链接 ！
+  * @note 注意使用 printf 搭配 %f 需要额外进行库的链接
+  * @note 0.05,0.2,0.95 优秀值
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d) {
@@ -252,8 +253,7 @@ void MDrv_ReadVol(void) {
   * @bug 2. 死区值需要测量得出，不能随意设置
   */
 void MDrv_Init(int mode) {
-    // MDrv_SetPID(0.8, 0.06, 0.5);
-    // P:1.9,I:0.2,D:0.8
+    //  0.05,0.2,0.95 优秀值
     // 1.5 0.15 1.8
     if (mode == 0) {
         MDrv_SetMtype(2); // 设置为310电机

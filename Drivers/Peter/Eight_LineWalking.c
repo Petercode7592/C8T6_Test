@@ -8,12 +8,13 @@
 static const int8_t sensor_weight[8] = {40, 25, 15, 5, -5, -15, -25, -40};
 static PID_Controller line_pid;
 static int16_t last_valid_error = 0; // 用于掉线方向记忆
+static int16_t last_digital = -1;     // 上一帧有效数据（用于掉线恢复）
 
 /**
  * @brief 初始化PID控制器（用于循迹）
  */
 void LineWalking_Init(void) {
-    PID_Init(&line_pid, 4.0f, 0.0f, 8.0f); // 使用PD控制
+    PID_Init(&line_pid, 2.0f, 0.0f, 10.0f); // 使用PD控制
 
     // 启用积分限幅（防止积分过大）
     line_pid.enable_limit = 1;
@@ -52,30 +53,28 @@ static int16_t Calculate_Track_Error(uint8_t track_digital) {
  */
 void LineWalking_Track(uint8_t track_digital, int16_t speed) {
     // 启动掉线恢复任务（全为1表示所有都是白线）
-    static uint8_t last_digital = 0xFF; // 记录上一帧原始传感器数据
-
     // 掉线处理：全白时根据 last_digital 判断是否刚刚发生跳变
     if (track_digital == 0xFF) {
-        if (last_digital != 0xFF) {
+        if (last_digital != 0xFF && last_digital != -1) {
             // 掉线前有信息，触发带方向的找线逻辑
             Motion_Spin((last_valid_error >= 0) ? 150 : -150);
         }
-        // 掉线后不再处理，等待下一次有效数据
-        return;
+        if (last_digital != -1) // 掉线后不再处理，等待下一次有效数据 刚启动让其继续走
+            return;
     }
-
-    // 若未掉线，先确保中止掉线任务
-    Motion_AbortSpin();
+    else if (track_digital == last_digital) {
+        return; // 没有变化，直接返回
+    }
 
     // 更新上一帧有效数据
     last_digital = track_digital;
 
-
     int16_t error = Calculate_Track_Error(track_digital);
     last_valid_error = error;
-
     int16_t correction = PID_Compute(&line_pid, error);
+
     OLED_ShowSignedNum(1,1, error, 4, 8); // 显示误差值
     OLED_ShowSignedNum(1,4, correction, 4, 8); // 显示修正值
-    Motion_SetLR_Speed(speed + correction, speed - correction);
+    // 根据误差计算速度修正
+    Motion_SetLR_Speed(speed - correction, speed + correction);
 }

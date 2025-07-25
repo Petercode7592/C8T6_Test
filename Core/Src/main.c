@@ -21,6 +21,7 @@
 #include "adc.h"
 #include "dma.h"
 #include "i2c.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -65,7 +66,6 @@ volatile uint8_t mpu6050_data_ready_flag = 0;
 volatile uint8_t linewalking_data_ready_flag = 1; // 让其先触发一次
 unsigned char UsrtDataBuff[500]; // 用于接收串口的数据
 unsigned char rx_buff[256]={0};  // 发送缓冲区
-unsigned char track_digtal;
 No_MCU_Sensor track_sensor; // 创建一个传感器对象
 
 /* USER CODE END PV */
@@ -108,6 +108,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 }
 
 /**
+ * @brief 定时器回调函数
+ * @param htim: 定时器句柄
+ * @retval None
+ * @note 这里使用 TIM2 定时器作为系统滴答定时器
+ */
+// TIM2 定时器每 1ms 触发一次中断
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM2) {
+        Task_tick(&track_sensor);
+        linewalking_data_ready_flag = 1; // 设置巡线数据就绪标志
+    }
+}
+
+/**
  * @brief UART接收完成回调函数
  * @param huart: UART句柄
  * @retval None
@@ -144,14 +158,14 @@ void OLED_Debug(char mode, uint8_t showtype) {
             OLED_ShowString(1, 7, "LineWK Status", 8);
         } else if (showtype == 1) {
             // 显示 LineWalking 数据
-            OLED_ShowNum(1,2,(track_digtal>>0)&0x01, 1,8);
-            OLED_ShowNum(9,2,(track_digtal>>1)&0x01, 1,8);
-            OLED_ShowNum(17,2,(track_digtal>>2)&0x01, 1,8);
-            OLED_ShowNum(25,2,(track_digtal>>3)&0x01, 1,8);
-            OLED_ShowNum(33,2,(track_digtal>>4)&0x01, 1,8);
-            OLED_ShowNum(41,2,(track_digtal>>5)&0x01, 1,8);
-            OLED_ShowNum(49,2,(track_digtal>>6)&0x01, 1,8);
-            OLED_ShowNum(57,2,(track_digtal>>7)&0x01, 1,8);
+            OLED_ShowNum(1,2,(track_sensor.Digtal>>0)&0x01, 1,8);
+            OLED_ShowNum(9,2,(track_sensor.Digtal>>1)&0x01, 1,8);
+            OLED_ShowNum(17,2,(track_sensor.Digtal>>2)&0x01, 1,8);
+            OLED_ShowNum(25,2,(track_sensor.Digtal>>3)&0x01, 1,8);
+            OLED_ShowNum(33,2,(track_sensor.Digtal>>4)&0x01, 1,8);
+            OLED_ShowNum(41,2,(track_sensor.Digtal>>5)&0x01, 1,8);
+            OLED_ShowNum(49,2,(track_sensor.Digtal>>6)&0x01, 1,8);
+            OLED_ShowNum(57,2,(track_sensor.Digtal>>7)&0x01, 1,8);
         }
     }
 }
@@ -192,8 +206,10 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_ADC1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
     No_MCU_Ganv_Sensor_Init(&track_sensor);
+    HAL_TIM_Base_Start_IT(&htim2);
     MDrv_Init(0); // 初始化驱动板
     HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收,要在初始化驱动板前才能接收电池数据
     HAL_Delay(200);
@@ -219,7 +235,6 @@ int main(void)
         OLED_Clear();
         OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题[Debug]
     }
-    Motion_Forward(200);
 
   /* USER CODE END 2 */
 
@@ -227,11 +242,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     while (1) {
 
-        // No_Mcu_Ganv_Sensor_Task_Without_tick(&track_sensor);
-        // track_digtal = track_sensor.Digtal; // 获取数字跟踪传感器数据
-        // LineWalking_Track(track_digtal, 200);
+        // No_Mcu_Ganv_Sensor_Task_Without_tick(&track_sensor);     // 传感器轮询处理
+
         OLED_Debug('L',1);                            // OLED 显示 LineWalking 数据
-        // HAL_Delay(20);
         if (MPU6050_Switch) {
             if (mpu6050_data_ready_flag) {
                 mpu6050_data_ready_flag = 0;
@@ -239,9 +252,14 @@ int main(void)
             }
             // Motion_SpinTaskUpdate(MPU6050_Data.YawAngle);       // 是否不需要实时更新？内部有转弯判断
         }
-        if (Tracking4_Switch && linewalking_data_ready_flag) {
+        if (linewalking_data_ready_flag) {
             linewalking_data_ready_flag = 0;
-            LineWalking(150); // 传感器数据处理
+            if (Tracking4_Switch)
+                LineWalking(150); // 传感器数据处理
+            else if (Tracking8_Switch) {
+                No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor);           // 传感器任务处理
+                LineWalking_Track(track_sensor.Digtal, 200);
+            }
         }
     }
     /* USER CODE END WHILE */
