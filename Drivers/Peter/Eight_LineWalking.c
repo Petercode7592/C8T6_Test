@@ -73,8 +73,8 @@ void LineWalking_Track(uint8_t track_digital, int16_t speed) {
     last_valid_error = error;
     int16_t correction = PID_Compute(&line_pid, error);
 
-    OLED_ShowSignedNum(1,1, error, 4, 8); // 显示误差值
-    OLED_ShowSignedNum(1,4, correction, 4, 8); // 显示修正值
+    // OLED_ShowSignedNum(1,1, error, 4, 8); // 显示误差值
+    // OLED_ShowSignedNum(1,4, correction, 4, 8); // 显示修正值
     // 根据误差计算速度修正
     Motion_SetLR_Speed(speed - correction, speed + correction);
 }
