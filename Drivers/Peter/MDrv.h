@@ -14,7 +14,7 @@ extern uint16_t mtep[4];
 extern float v[4];
 extern float Voltage; // 电池电压
 
-HAL_StatusTypeDef MDrv_Reset();
+HAL_StatusTypeDef MDrv_Reset(void);
 HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype);
 HAL_StatusTypeDef MDrv_SetMline(uint8_t mline);
 HAL_StatusTypeDef MDrv_SetMphase(uint8_t mphase);

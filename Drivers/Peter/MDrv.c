@@ -22,7 +22,7 @@ float Voltage = 0.0f; // 电池电压
 /** @brief  (Checked)MCU 驱动板复位
   * @retval HAL_StatusTypeDef 返回状态
   */
-HAL_StatusTypeDef MDrv_Reset() {
+HAL_StatusTypeDef MDrv_Reset(void) {
     return HAL_UART_Transmit(&UMUART_Cfg, "$flash_reset#", 13, Uart_MaxWait);
 }
 
@@ -256,19 +256,18 @@ void MDrv_Init(int mode) {
     //  0.05,0.2,0.95 优秀值
     // 1.5 0.15 1.8
     if (mode == 0) {
-        MDrv_SetMtype(2); // 设置为310电机
+        MDrv_SetMtype(2);       // 设置为310电机
         HAL_Delay(125);
-        MDrv_SetMline(13); // 设置电机的相位线
+        MDrv_SetMline(13);      // 设置电机的相位线
         HAL_Delay(125);
-        MDrv_SetMphase(20); // 设置电机的减速比
+        MDrv_SetMphase(20);     // 设置电机的减速比
         HAL_Delay(125);
-        MDrv_SetWdiameter(48); // 设置车轮直径
+        MDrv_SetWdiameter(48);  // 设置车轮直径
         HAL_Delay(125);
         MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
         HAL_Delay(125);
     }
-    // MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
-    MDrv_SetSpeed(0, 0, 0, 0); // 设置电机速度
+    MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
     HAL_Delay(100);
 }
 
@@ -283,7 +282,7 @@ uint16_t Mdrv_ReadMTEP(int8_t MX) {
     // 发送指令 "$MTEP#"
     if (MX == -1)
         return (mtep[0] + mtep[1] + mtep[2] + mtep[3]) / 4; // 返回所有电机的实时转动编码器值之和
-    return mtep[MX]; // 返回第一个电机的实时转动编码器值
+    return mtep[MX]; // 返回电机的实时转动编码器值
 }
 
 /**

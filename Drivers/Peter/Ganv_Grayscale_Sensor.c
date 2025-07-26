@@ -1,8 +1,9 @@
 #include "Ganv_Grayscale_Sensor_Config.h"
 
-unsigned short white[8] = {1765, 2693, 2954, 2948, 2898, 2756, 3008, 2674};
-unsigned short black[8] = {234, 565, 765, 737, 686, 651, 900, 746};
-
+// 黑场校准值
+unsigned short ganv_white[8] = {3280, 3287, 3299, 3280, 3209, 3260, 3307, 3300};
+// 白场校准值
+unsigned short ganv_black[8] = {1506, 1838, 1698, 1001, 1112, 1024, 1653, 2028};
 
 /* 函数功能：采集8个通道的模拟值并进行均值滤波
    参数说明：result - 存储8个通道处理结果的数组 */
@@ -117,29 +118,29 @@ void No_MCU_Ganv_Sensor_Init(No_MCU_Sensor *sensor) {
 
     for (int i = 0; i < 8; i++) {
         // 确保白值 > 黑值（必要时交换）
-        if (black[i] >= white[i]) {
-            temp = white[i];
-            white[i] = black[i];
-            black[i] = temp;
+        if (ganv_black[i] >= ganv_white[i]) {
+            temp = ganv_white[i];
+            ganv_white[i] = ganv_black[i];
+            ganv_black[i] = temp;
         }
 
         // 计算灰度阈值（1:2和2:1分界点）
-        sensor->Gray_white[i] = (white[i] * 2 + black[i]) / 3;
-        sensor->Gray_black[i] = (white[i] + black[i] * 2) / 3;
+        sensor->Gray_white[i] = (ganv_white[i] * 2 + ganv_black[i]) / 3;
+        sensor->Gray_black[i] = (ganv_white[i] + ganv_black[i] * 2) / 3;
 
         // 保存校准数据
-        sensor->Calibrated_black[i] = black[i];
-        sensor->Calibrated_white[i] = white[i];
+        sensor->Calibrated_black[i] = ganv_black[i];
+        sensor->Calibrated_white[i] = ganv_white[i];
 
         // 处理无效校准数据（全黑/全白/相等情况）
-        if ((white[i] == 0 && black[i] == 0) ||
-            (white[i] == black[i])) {
+        if ((ganv_white[i] == 0 && ganv_black[i] == 0) ||
+            (ganv_white[i] == ganv_black[i])) {
             sensor->Normal_factor[i] = 0.0; // 无效通道
             continue;
         }
 
         // 计算归一化系数
-        Normal_Diff[i] = (double) white[i] - (double) black[i];
+        Normal_Diff[i] = (double) ganv_white[i] - (double) ganv_black[i];
         sensor->Normal_factor[i] = sensor->bits / Normal_Diff[i];
     }
     sensor->ok = 1; // 标记初始化完成
@@ -149,8 +150,8 @@ void No_MCU_Ganv_Sensor_Init(No_MCU_Sensor *sensor) {
 void No_Mcu_Ganv_Sensor_Task_Without_tick(No_MCU_Sensor *sensor) {
     Get_Analog_value(sensor->Analog_value); // 采集数据
     convertAnalogToDigital(sensor->Analog_value, sensor->Gray_white, sensor->Gray_black, &sensor->Digtal); // 二值化处理
-    normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black, sensor->Normal_value,
-                          sensor->bits); // 归一化处理
+    // normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black, sensor->Normal_value,
+    //                       sensor->bits); // 归一化处理
 }
 
 /* 函数功能：传感器主任务（带定时器版本）*/
@@ -160,8 +161,9 @@ void No_Mcu_Ganv_Sensor_Task_With_tick(No_MCU_Sensor *sensor) {
         // 执行数据采集和处理
         Get_Analog_value(sensor->Analog_value);
         convertAnalogToDigital(sensor->Analog_value, sensor->Gray_white, sensor->Gray_black, &sensor->Digtal);
-        normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black,
-                              sensor->Normal_value, sensor->bits);
+        // 定时器处不需要计算这么多
+        // normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black,
+        //                       sensor->Normal_value, sensor->bits);
         sensor->Tick = 0; // 重置定时器
     }
 }

@@ -138,35 +138,27 @@ void MPU6050_Read_All(MPU6050_Data_t *DataStruct)
  */
 void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct)
 {
-    uint8_t Rec_Data[2]; // 优化点1: 只需要2个字节来存放Z轴陀螺仪数据
+    uint8_t Rec_Data[2];                                                    // 只需要2个字节来存放Z轴陀螺仪数据
 
-    // --- 1. 高效读取数据 ---
     // 只读取GYRO_Z的数据，而不是读取从加速度计开始的所有14个字节，大大减少I2C总线负担
     HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, GYRO_ZOUT_H_REG, 1, Rec_Data, 2, 100);
-
     DataStruct->Gyro_Z_RAW = (int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
 
-    // --- 2. 使用 float 进行浮点运算 ---
-    // 在没有硬件双精度FPU的单片机上(如STM32F1)，float比double快得多
+    // 使用 float 进行浮点运算 在没有硬件双精度FPU的单片机上(如STM32F1)，float比double快得多
     static uint32_t timer = 0; // 优化点2: 设为static，保证在函数调用间保持其值
     float dt = (float)(HAL_GetTick() - timer) / 1000.0f;
     timer = HAL_GetTick();
 
     // 如果dt为0（调用间隔小于1ms），则不进行计算，防止除零或无效积分
-    if (dt <= 0) {
+    if (dt <= 0)
         return;
-    }
 
-    // --- 3. 积分计算 Yaw 角 ---
-    // 将原始值转换为角速度 (单位: 度/秒)
-    DataStruct->Gz = (float)DataStruct->Gyro_Z_RAW / GYRO_SENSITIVITY;
-
-    // 减去零点漂移（偏置），这个gz_bias需要在设备静止时提前计算并标定
-    float gz_calibrated = DataStruct->Gz - gz_bias;
+    DataStruct->Gz = (float)DataStruct->Gyro_Z_RAW / GYRO_SENSITIVITY;      // 积分计算 Yaw 角 将原始值转换为角速度 (单位: 度/秒)
+    float gz_calibrated = DataStruct->Gz - gz_bias;                         // 减去零点漂移（偏置），这个gz_bias需要在设备静止时提前计算并标定
 
     // 使用静态变量来累加角度值
-    static float currentYaw = 0.0f; // 优化点3: 设为static，保存积分结果
-    currentYaw += gz_calibrated * dt; // 欧拉积分
+    static float currentYaw = 0.0f;                                         // 优化点3: 设为static，保存积分结果
+    currentYaw += gz_calibrated * dt;                                       // 欧拉积分
 
     // 可以在这里将角度限制在 0-360 度或 -180~180 度范围内，防止无限增大
     // fmodf 是 float 版本的求余函数
@@ -174,7 +166,6 @@ void MPU6050_Get_Angle_yaw(MPU6050_Data_t *DataStruct)
 
     DataStruct->YawAngle = currentYaw;
 
-    // --- 4. 清除数据就绪中断标志位 ---
     // 读取中断状态寄存器可以清除中断标志，为下一次中断做准备
     uint8_t dummy;
     HAL_I2C_Mem_Read(LWKhIIC, MPU6050_ADDR, INT_STATUS_REG, 1, &dummy, 1, 10);

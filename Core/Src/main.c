@@ -38,12 +38,13 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-volatile uint8_t mpu6050_data_ready_flag = 0;
-volatile uint8_t linewalking_data_ready_flag = 1; // 让其先触发一次
-unsigned char UsrtDataBuff[500]; // 用于接收串口的数据
-unsigned char rx_buff[256] = {0}; // 发送缓冲区
-No_MCU_Sensor track_sensor; // 创建一个传感器对象
-MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
+volatile uint8_t mpu6050_data_ready_flag = 0;			// 6050 数据就绪标志(中断)
+volatile uint8_t tracking_data_ready_flag = 1;			// =1 让其先触发一次
+unsigned char UsrtDataBuff[500];						// 用于接收串口的数据
+unsigned char rx_buff[256] = {0};						// 发送缓冲区
+No_MCU_Sensor track_sensor;								// 创建一个传感器对象
+MPU6050_Data_t MPU6050_Data;							// 定义一个MPU6050数据结构体实例
+int16_t tim2_tick = 0;									// 定时器2滴答计数器
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -51,11 +52,10 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 #define Debug_Switch 1			// 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口
 
 #define Tracking4_Switch 0		// 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
-#define Tracking8_Switch 1		// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
+#define Tracking4_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
+#define Tracking8_Switch 0		// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
 #define MPU6050_Switch 0		// 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
 #define OLED_Switch 1			// 1:开启 OLED 模块		0:关闭 OLED 模块
-#define Tracking4_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -104,8 +104,8 @@ void Uart_JudgeDataType(char *Udata) {
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 	if (MPU6050_Switch && pin == GPIO_PIN_9) // PB9 – MPU INT
 		mpu6050_data_ready_flag = 1;
-	else if (Tracking4_Switch && (pin & Tracking4_Pin))
-		linewalking_data_ready_flag = 1;
+	if (Tracking4_Switch && (pin & Tracking4_Pin))
+		tracking_data_ready_flag = 1;
 }
 
 /**
@@ -116,8 +116,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM2) {
-		Task_tick(&track_sensor);
-		linewalking_data_ready_flag = 1; // 设置巡线数据就绪标志
+
+		tim2_tick++; // 增加定时器滴答计数
+		if (tim2_tick == 10) {
+			// 每10ms触发一次
+			Task_tick(&track_sensor);
+			tim2_tick = 0; // 重置滴答计数
+			tracking_data_ready_flag = 1; // 设置巡线数据就绪标志
+		}
 	}
 }
 
@@ -210,7 +216,7 @@ int main(void) {
 	MDrv_Init(0);													// 初始化驱动板
 	HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500);	// 启动DMA接收，若有串口数据传送需在该函数后
 	HAL_Delay(100);
-	MDrv_RequestVol();														// 发送获取电池电压指令
+	MDrv_RequestVol();													// 发送获取电池电压指令
 	HAL_Delay(100);
 	MDrv_UploadData(0, 0, 1);						// 获取电机编码器数据
 	LineWalking_Init();													// 初始化 PID 控制器
@@ -220,17 +226,17 @@ int main(void) {
 
 	if (MPU6050_Switch && !MPU6050_Init(&hi2c1)) {
 		// 初始化MPU6050
-		HAL_Delay(750);
-		OLED_ShowString(1, 1, "MPU6050 Init....", 8);
+		HAL_Delay(750);													// 延时等待稳定
+		OLED_ShowString(1, 1, "MPU6050 Init....", 8);		// OLED 显示 MPU6050 初始化信息
 		MPU6050_Calibrate_Gyro();										// 校准陀螺仪偏置 不可转动
 	} else {
-		OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8);
+		OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8);	// 6050错误信息提示
 		HAL_Delay(1500);
 	}
 
 	if (OLED_Switch) {
 		OLED_Clear();
-		OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题[Debug]
+		OLED_Debug('L', 0);								// OLED 显示 LineWalking 模块标题[Debug]
 	}
 
 	/* USER CODE END 2 */
@@ -247,11 +253,11 @@ int main(void) {
 				MPU6050_Get_Angle_yaw(&MPU6050_Data);				// 获取陀螺仪数据
 			}
 		}
-		if (linewalking_data_ready_flag) {
-			linewalking_data_ready_flag = 0;
+		if (tracking_data_ready_flag) {
+			tracking_data_ready_flag = 0;
 			if (Tracking4_Switch)									// 如果打开四路循迹
 				LineWalking(150);
-			else if (Tracking8_Switch) {							// 如果打开八路循迹
+			if (Tracking8_Switch) {									// 如果打开八路循迹
 				No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor);	// 传感器任务处理
 				LineWalking8_Track(track_sensor.Digtal, 250);
 			}
