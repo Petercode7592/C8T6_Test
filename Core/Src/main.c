@@ -48,6 +48,8 @@ MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define Debug_Switch 1			// 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口
+
 #define Tracking4_Switch 0		// 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
 #define Tracking8_Switch 1		// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
 #define MPU6050_Switch 0		// 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
@@ -80,7 +82,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void Uart_JudgeDataType(char *Udata) {
-	HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *) Udata, strlen(Udata), Uart_MaxWait);
+	if (Debug_Switch) HAL_UART_Transmit(&Bluetooth_Cfg, (uint8_t *) Udata, strlen(Udata), Uart_MaxWait);
 	if (strncmp(Udata, "$", 1) == 0) {
 		if (strncmp(Udata, "$MAll:", 6) == 0) {
 			MDrv_ProcessMALL(Udata + 6);
@@ -100,22 +102,18 @@ void Uart_JudgeDataType(char *Udata) {
  * @retval None
  */
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
-	if (MPU6050_Switch && pin == GPIO_PIN_9) {
-		// PB9 – MPU INT
+	if (MPU6050_Switch && pin == GPIO_PIN_9) // PB9 – MPU INT
 		mpu6050_data_ready_flag = 1;
-	} else if (Tracking4_Switch && (pin & Tracking4_Pin)) {
-		/* PB9 – MPU INT */
+	else if (Tracking4_Switch && (pin & Tracking4_Pin))
 		linewalking_data_ready_flag = 1;
-	}
 }
 
 /**
  * @brief 定时器回调函数
  * @param htim: 定时器句柄
  * @retval None
- * @note 这里使用 TIM2 定时器作为系统滴答定时器
+ * @note 这里使用 TIM2 定时器作为系统滴答定时器 TIM2 定时器每 1ms 触发一次中断
  */
-// TIM2 定时器每 1ms 触发一次中断
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM2) {
 		Task_tick(&track_sensor);
@@ -129,7 +127,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
  * @retval None
  * @note 空闲中断+DMA 这里不要听信代码建议加 const
  */
-//
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 	// 这个回调函数会在接收到数据时被调用
 	if (huart->Instance == UMUART_Cfg.Instance) {
@@ -208,15 +205,14 @@ int main(void) {
 	MX_ADC1_Init();
 	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
-	No_MCU_Ganv_Sensor_Init(&track_sensor);
-	HAL_TIM_Base_Start_IT(&htim2);
+	No_MCU_Ganv_Sensor_Init(&track_sensor);								// 初始化八路循迹传感器
+	HAL_TIM_Base_Start_IT(&htim2);										// 启动定时器2中断
 	MDrv_Init(0);													// 初始化驱动板
 	HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500);	// 启动DMA接收，若有串口数据传送需在该函数后
 	HAL_Delay(100);
-	MDrv_ReadVol();														// 发送获取电池电压指令
+	MDrv_RequestVol();														// 发送获取电池电压指令
 	HAL_Delay(100);
-	MDrv_UploadData(0, 0, 1);
-
+	MDrv_UploadData(0, 0, 1);						// 获取电机编码器数据
 	LineWalking_Init();													// 初始化 PID 控制器
 
 	if (OLED_Switch)
@@ -257,7 +253,7 @@ int main(void) {
 				LineWalking(150);
 			else if (Tracking8_Switch) {							// 如果打开八路循迹
 				No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor);	// 传感器任务处理
-				LineWalking_Track(track_sensor.Digtal, 250);
+				LineWalking8_Track(track_sensor.Digtal, 250);
 			}
 		}
 	}

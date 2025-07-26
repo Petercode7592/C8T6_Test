@@ -21,8 +21,10 @@ void Get_Analog_value(unsigned short *result) {
         for (j = 0; j < 8; j++) {
             Anolag += Get_adc_of_user(); // 累加ADC采样值
         }
-        if (!Direction)result[i] = Anolag / 8; // 计算平均值
-        else result[7 - i] = Anolag / 8; // 计算平均值
+        if (!Direction)
+            result[i] = Anolag / 8; // 计算平均值
+        else
+            result[7 - i] = Anolag / 8; // 计算平均值
         Anolag = 0; // 重置累加器
     }
 }

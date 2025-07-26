@@ -78,7 +78,7 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone) {
 }
 
 /**
-  * @brief (可选)配置车轮直径
+  * @brief 配置车轮直径
   * @param wdiameter 车轮直径，单位为毫米
   * @note 带编码器电机来说：此值对于控制速度起主要作用，此值单位为毫米（mm）；如果此值不正确，只会影响速度数据不准确，不会影响编码器的数据
   * @retval HAL_StatusTypeDef 返回状态
@@ -236,11 +236,11 @@ void MDrv_ProcessVol(char *data) {
     }
 }
 
-/** @brief 读取电池电压
+/** @brief 请求电池电压
   * @note 发送指令 "$read_vol#" 仅发送不解析数据
   * @retval void
   */
-void MDrv_ReadVol(void) {
+void MDrv_RequestVol(void) {
     HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$read_vol#", 10, Uart_MaxWait);
 }
 

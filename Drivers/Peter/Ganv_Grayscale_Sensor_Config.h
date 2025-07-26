@@ -45,22 +45,19 @@
 
 /*************************** 传感器数据结构 ***************************/
 typedef struct {
-    unsigned short Analog_value[8];    // 原始模拟量值
-    unsigned short Normal_value[8];   // 归一化后的值
+    unsigned short Analog_value[8];     // 原始模拟量值
+    unsigned short Normal_value[8];     // 归一化后的值
     unsigned short Calibrated_white[8]; // 白校准基准值
     unsigned short Calibrated_black[8]; // 黑校准基准值
-    unsigned short Gray_white[8];      // 白平衡灰度值
-    unsigned short Gray_black[8];      // 黑平衡灰度值
-    double Normal_factor[8];          // 归一化系数
-    double bits;                      // ADC分辨率对应位数
-    unsigned char Digtal;              // 数字输出状态
-    unsigned char Time_out;            // 超时标志
-    unsigned char Tick;                // 时基计数器
-    unsigned char ok;                  // 传感器就绪标志
+    unsigned short Gray_white[8];       // 白平衡灰度值
+    unsigned short Gray_black[8];       // 黑平衡灰度值
+    double Normal_factor[8];            // 归一化系数
+    double bits;                        // ADC分辨率对应位数
+    unsigned char Digtal;               // 数字输出状态
+    unsigned char Time_out;             // 超时标志
+    unsigned char Tick;                 // 时基计数器
+    unsigned char ok;                   // 传感器就绪标志
 } No_MCU_Sensor;
-
-
-/*************************** 黑白数组 ***************************/
 
 
 #ifdef __cplusplus

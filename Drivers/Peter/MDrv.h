@@ -30,7 +30,7 @@ void MDrv_ProcessMTEP(char *data);
 void MDrv_ProcessMSPD(char *data);
 void MDrv_ProcessVol(char *data);
 
-void MDrv_ReadVol(void);
+void MDrv_RequestVol(void);
 void MDrv_Init(int mode);
 
 uint32_t Mdrv_ReadMALL(int8_t MX);
