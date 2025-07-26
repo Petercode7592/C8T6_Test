@@ -53,7 +53,7 @@ int16_t tim2_tick = 0;									// 定时器2滴答计数器
 
 #define Tracking4_Switch 0		// 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
 #define Tracking4_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
-#define Tracking8_Switch 0		// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
+#define Tracking8_Switch 1		// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
 #define MPU6050_Switch 0		// 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
 #define OLED_Switch 1			// 1:开启 OLED 模块		0:关闭 OLED 模块
 /* USER CODE END PD */

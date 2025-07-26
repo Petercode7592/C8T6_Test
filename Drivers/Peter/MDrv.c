@@ -264,7 +264,7 @@ void MDrv_Init(int mode) {
         HAL_Delay(125);
         MDrv_SetWdiameter(48);  // 设置车轮直径
         HAL_Delay(125);
-        MDrv_SetDeadzone(1650); // 设置电机的pwm脉冲死区,需要测量得出
+        MDrv_SetDeadzone(1200); // 设置电机的pwm脉冲死区,需要测量得出
         HAL_Delay(125);
     }
     MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
