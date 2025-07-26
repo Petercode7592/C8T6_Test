@@ -30,6 +30,33 @@ static uint8_t spin_active = 0;
 static float KRadius = CAR_LENGTH / 2.0f + CAR_WIDTH / 2.0f; // 小车前后轮中心距离
 static  const float DEG_TO_RAD = PI / 180.0f; // 角度转弧度的常数
 
+
+/**
+ * @brief 小车立即停止运动 (PID控制)
+ * @note 设置速度为0，但PID仍在作用.此函数会立即停止小车运动，适用于需要快速停车的场景。
+ * @note 说明：设置时可能会短时间倒转，取决速度大小
+ * @note 1. V0 = 500mm/s 运行小车，50ms内速度减为0，a = -10m/s^2，多走距离是 1.25cm (不考虑f)
+ * @note 2. 但后续需要150ms反向加速后减为0才能完全停止，期间会有反向运动,距离比上者更小小可忽略
+ * @note 3. 最高时速 1m/s 无法测得数据
+ */
+void Motion_Stop_WithPID(void)
+{
+    MDrv_SetSpeed(0, 0, 0, 0);          // 设置所有电机速度为0，PID控制器会处理停车过程
+}
+
+/**
+ * @brief 停止小车运动（不使用PID控制）
+ * @note 通过设置PWM为0，直接停止电机输出，有速度会向前走一段距离
+ * @note 说明 1. 惯性停车空转数据 200mm/s -> 0mm/s 需要 0.15s 加速度为 1.33m/s^2
+ * @note 2. V0 = 500mm/s 运行小车，400ms内速度减为0，a = -1.25m/s^2，多走距离是 25cm (不考虑f)
+ * @note 3. 即使最高时速 1m/s 也只需要 0.7s停车，多走35cm (不考虑f)
+ */
+void Motion_Stop_WithoutPID(void)
+{
+    MDrv_SetPWM(0, 0, 0, 0);            // 停止电机输出。仍有速度会继续前进
+}
+
+
 /**
  * @brief 小车前进
  * @param speed 线速度，单位 mm/s，为 0 时使用上一次速度
@@ -180,13 +207,4 @@ void Motion_RotationTurn(float angle_deg, int16_t forward_speed)
     int16_t Rspd = (int16_t)(spd_fwd + delta);
 
     MDrv_SetSpeed(Lspd, Lspd, Rspd, Rspd);
-}
-
-/**
- * @brief 小车立即停止运动
- */
-void Motion_Stop(void)
-{
-    MDrv_SetSpeed(0, 0, 0, 0);
-    MDrv_SetPWM(0, 0, 0, 0);  // 停止电机输出
 }

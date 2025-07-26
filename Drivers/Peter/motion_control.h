@@ -4,6 +4,9 @@
 
 #include <stdint.h>
 
+void Motion_Stop_WithPID(void);
+void Motion_Stop_WithoutPID(void);
+
 void Motion_Forward(int16_t speed);
 void Motion_Backward(int16_t speed);
 void Motion_LeftTurnByRadius(int16_t speed, float radius);
@@ -16,10 +19,6 @@ void Motion_SetLR_Speed(int16_t left_speed, int16_t right_speed);
 void Motion_Spin(int16_t speed);
 void Motion_RotationTurn(float angle_deg, int16_t forward_speed);
 
-void Motion_Stop(void);
 
-void Motion_SpinTaskStart(float angle_deg, int16_t speed);
-void Motion_SpinTaskUpdate(float now_angle);
-void Motion_AbortSpin(void);
 
 #endif
