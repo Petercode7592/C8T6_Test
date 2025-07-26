@@ -34,10 +34,10 @@ static  const float DEG_TO_RAD = PI / 180.0f; // 角度转弧度的常数
 /**
  * @brief 小车立即停止运动 (PID控制)
  * @note 设置速度为0，但PID仍在作用.此函数会立即停止小车运动，适用于需要快速停车的场景。
- * @note 说明：设置时可能会短时间倒转，取决速度大小
+ * @note 说明：设置时可能会短时间倒转，取决速度大小. a 取决于 PID 配置
  * @note 1. V0 = 500mm/s 运行小车，50ms内速度减为0，a = -10m/s^2，多走距离是 1.25cm (不考虑f)
  * @note 2. 但后续需要150ms反向加速后减为0才能完全停止，期间会有反向运动,距离比上者更小小可忽略
- * @note 3. 最高时速 1m/s 无法测得数据
+ * @note 3. 最高时速 1m/s 150ms停车，a = -6.67m/s^2，多走距离是 2.5cm (不考虑f)
  */
 void Motion_Stop_WithPID(void)
 {
@@ -175,7 +175,6 @@ void Motion_RightTurnByAngdps(int16_t speed, float angspeed_dps)
  */
 void Motion_SetLR_Speed(int16_t left_speed, int16_t right_speed)
 {
-    // 假设 M1, M2 是左轮，M3, M4 是右轮
     MDrv_SetSpeed(left_speed, left_speed, right_speed, right_speed);
 }
 

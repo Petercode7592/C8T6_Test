@@ -49,13 +49,16 @@ int16_t tim2_tick = 0;									// 定时器2滴答计数器
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define Debug_Switch 1			// 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口
+#define Protection_Switch	1			// 1:防止SweetBaby		0:关闭 Protection 模块
 
-#define Tracking4_Switch 0		// 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
+#define Debug_Switch		0			// 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口
+
+#define Tracking4_Switch	0			// 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
+#define Tracking8_Switch	1			// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
+#define MPU6050_Switch		0			// 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
+#define OLED_Switch			1			// 1:开启 OLED 模块		0:关闭 OLED 模块
+
 #define Tracking4_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
-#define Tracking8_Switch 1		// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
-#define MPU6050_Switch 0		// 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
-#define OLED_Switch 1			// 1:开启 OLED 模块		0:关闭 OLED 模块
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -116,7 +119,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM2) {
-
+		// 假设速度 200mm/s = 20cm/s 经过黑线 2cm 0.1s通过 可触发10次中断
 		tim2_tick++; // 增加定时器滴答计数
 		if (tim2_tick == 10) {
 			// 每10ms触发一次
@@ -211,6 +214,9 @@ int main(void) {
 	MX_ADC1_Init();
 	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
+	if (Protection_Switch)
+		while (1) {}
+
 	No_MCU_Ganv_Sensor_Init(&track_sensor);								// 初始化八路循迹传感器
 	HAL_TIM_Base_Start_IT(&htim2);										// 启动定时器2中断
 	MDrv_Init(0);													// 初始化驱动板

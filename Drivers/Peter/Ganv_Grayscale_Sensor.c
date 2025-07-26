@@ -48,28 +48,6 @@ void convertAnalogToDigital(unsigned short *adc_value, unsigned short *Gray_whit
     }
 }
 
-/* 函数功能：归一化ADC值到指定范围
-   参数说明：
-   adc_value - 原始ADC值数组
-   Normal_factor - 归一化系数数组
-   Calibrated_black - 校准黑值数组
-   result - 存储归一化结果的数组
-   bits - ADC最大量程值（如255/1024等） */
-void normalizeAnalogValues(unsigned short *adc_value, double *Normal_factor, unsigned short *Calibrated_black,
-                           unsigned short *result, double bits) {
-    for (int i = 0; i < 8; i++) {
-        unsigned short n;
-        // 计算归一化值（减去黑电平后缩放）
-        if (adc_value[i] < Calibrated_black[i]) n = 0; // 低于黑电平归零
-        else n = (adc_value[i] - Calibrated_black[i]) * Normal_factor[i];
-
-        // 限幅处理
-        if (n > bits) {
-            n = bits;
-        }
-        result[i] = n;
-    }
-}
 
 /* 函数功能：传感器结构体初始化（首次初始化）
    参数说明：sensor - 传感器结构体指针 */
@@ -178,15 +156,6 @@ unsigned char Get_Digtal_For_User(No_MCU_Sensor *sensor) {
     return sensor->Digtal; // 返回8位数字状态（每位对应一个传感器）
 }
 
-/* 函数功能：获取归一化后的数据
-   返回值：1-成功 0-未初始化 */
-unsigned char Get_Normalize_For_User(No_MCU_Sensor *sensor, unsigned short *result) {
-    if (!sensor->ok)return 0;
-    else {
-        memcpy(result, sensor->Normal_value, 16); // 拷贝归一化数据
-        return 1;
-    }
-}
 
 /* 函数功能：获取原始校准数据
    返回值：1-成功 0-未初始化 */
