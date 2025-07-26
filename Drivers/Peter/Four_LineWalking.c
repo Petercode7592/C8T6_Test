@@ -87,12 +87,10 @@ void LineWalking(int16_t speed) {
     }
     else if (!L2) { // 状态: [0, x, x, x] -> 最左侧传感器压线，左急转
         Motion_LeftTurnByAngdps(TURN_BASE_SPEED,5);
-        // Motion_Spin(RotSpeed); // 正值左转
         last_deviation = -1;
     }
     else if (!R2) { // 状态: [x, x, x, 0] -> 最右侧传感器压线，右急转
         Motion_RightTurnByRadius(TURN_BASE_SPEED,5);
-        // Motion_Spin(-RotSpeed); // 负值右转
         last_deviation = 1;
     }
 
