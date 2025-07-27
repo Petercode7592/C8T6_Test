@@ -57,6 +57,10 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/Peter/Eight_LineWalking.h
         Drivers/Peter/PID.c
         Drivers/Peter/PID.h
+        Drivers/Peter/VL53L1/VL5311H.c
+        Drivers/Peter/VL53L1/VL5311H.h
+        Drivers/Peter/VL53L1/VL53L1X_api.c
+        Drivers/Peter/VL53L1/vl53l1_platform.c
 )
 
 # Add STM32CubeMX generated sources
