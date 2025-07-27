@@ -14,7 +14,8 @@ static int16_t last_digital = -1;     // 上一帧有效数据（用于掉线恢
  * @brief 初始化PID控制器（用于循迹）
  */
 void LineWalking_Init(void) {
-    PID_Init(&line_pid, 15.0f, 2.0f, 3.0f); // 使用PD控制
+    // 12.0 5.8
+    PID_Init(&line_pid, 12.0f, 0.0f, 5.8f); // 使用PD控制
 
     // 启用积分限幅（防止积分过大）
     line_pid.enable_limit = 1;
@@ -49,6 +50,7 @@ static int16_t Calculate_Track_Error(uint8_t track_digital) {
  * @brief 进行一次循迹控制（建议周期调用）
  * @param track_digital 8路黑白状态数据（bit0~bit7：S1~S8）
  * @param speed 直行速度
+ * @note 400mm/s 是稳定的最大速度
  */
 void LineWalking8_Track(uint8_t track_digital, int16_t speed) {
     // 启动掉线恢复任务（全为1表示所有都是白线）

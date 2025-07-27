@@ -49,7 +49,7 @@ int16_t tim2_tick = 0;									// 定时器2滴答计数器
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define Protection_Switch	1			// 1:防止SweetBaby		0:关闭 Protection 模块
+#define Protection_Switch	0			// 1:防止SweetBaby		0:关闭 Protection 模块
 
 #define Debug_Switch		0			// 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口
 
@@ -130,7 +130,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 }
 
-/**
+-/**
  * @brief UART接收完成回调函数
  * @param huart: UART句柄
  * @retval None
@@ -265,7 +265,7 @@ int main(void) {
 				LineWalking(150);
 			if (Tracking8_Switch) {									// 如果打开八路循迹
 				No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor);	// 传感器任务处理
-				LineWalking8_Track(track_sensor.Digtal, 250);
+				LineWalking8_Track(track_sensor.Digtal, 200);
 			}
 		}
 	}
