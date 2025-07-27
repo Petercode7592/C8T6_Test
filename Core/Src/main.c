@@ -105,7 +105,7 @@ void Uart_JudgeDataType(char *Udata) {
  * @retval None
  */
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
-	if (MPU6050_Switch && pin == GPIO_PIN_9) // PB9 – MPU INT
+	if (MPU6050_Switch && pin == MPU6050_EXTI_Pin) // PB9 – MPU INT
 		mpu6050_data_ready_flag = 1;
 	if (Tracking4_Switch && (pin & Tracking4_Pin))
 		tracking_data_ready_flag = 1;

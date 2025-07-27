@@ -56,6 +56,12 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, Track8_AD0_Pin|Track8_AD1_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : VL53L1X_EXTI_Pin */
+  GPIO_InitStruct.Pin = VL53L1X_EXTI_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(VL53L1X_EXTI_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pin : Track8_AD2_Pin */
   GPIO_InitStruct.Pin = Track8_AD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -70,24 +76,15 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Track_L2X1_Pin Track_L1X2_Pin Track_R1X3_Pin Track_R2X4_Pin */
-  GPIO_InitStruct.Pin = Track_L2X1_Pin|Track_L1X2_Pin|Track_R1X3_Pin|Track_R2X4_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  /*Configure GPIO pin : MPU6050_EXTI_Pin */
+  GPIO_InitStruct.Pin = MPU6050_EXTI_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(MPU6050_EXTI_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 
