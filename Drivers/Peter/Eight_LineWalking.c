@@ -41,6 +41,7 @@ static int16_t Calculate_Track_Error(uint8_t track_digital) {
             count++;
         }
     }
+    // 掉线检测1：
     // if (count == 0)
     //     return last_valid_error; // 如果没有黑线，返回上次有效误差
     return sum / count; // 返回平均误差
@@ -53,7 +54,7 @@ static int16_t Calculate_Track_Error(uint8_t track_digital) {
  * @note 400mm/s 是稳定的最大速度
  */
 void LineWalking8_Track(uint8_t track_digital, int16_t speed) {
-    // 启动掉线恢复任务（全为1表示所有都是白线）
+    // 掉线检测2：启动掉线恢复任务（全为1表示所有都是白线）
     // 掉线处理：全白时根据 last_digital 判断是否刚刚发生跳变
     if (track_digital == 0xFF) {
         if (last_digital != 0xFF && last_digital != -1) {

@@ -27,7 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include ".\Display/OLED/Oled.h"
+#include "./Display/OLED/Oled.h"
 #include "Four_LineWalking.h"
 #include "Ganv_Grayscale_Sensor_Config.h"
 #include "MDrv.h"
@@ -38,20 +38,20 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-volatile uint8_t mpu6050_data_ready_flag = 0;			// 6050 数据就绪标志(中断)
-volatile uint8_t tracking_data_ready_flag = 1;			// =1 让其先触发一次
-unsigned char UsrtDataBuff[500];						// 用于接收串口的数据
-unsigned char rx_buff[256] = {0};						// 发送缓冲区
-No_MCU_Sensor track_sensor;								// 创建一个传感器对象
-MPU6050_Data_t MPU6050_Data;							// 定义一个MPU6050数据结构体实例
-int16_t tim2_tick = 0;									// 定时器2滴答计数器
+volatile uint8_t mpu6050_data_ready_flag = 0; // 6050 数据就绪标志(中断)
+volatile uint8_t tracking_data_ready_flag = 1; // =1 让其先触发一次
+unsigned char UsrtDataBuff[500]; // 用于接收串口的数据
+unsigned char rx_buff[256] = {0}; // 发送缓冲区
+No_MCU_Sensor track_sensor; // 创建一个传感器对象
+MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
+int16_t tim2_tick = 0; // 定时器2滴答计数器
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define Protection_Switch	0			// 1:防止SweetBaby		0:关闭 Protection 模块
 
-#define Debug_Switch		0			// 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口
+#define Debug_Switch		0			// 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口 (Development Only)
 
 #define Tracking4_Switch	0			// 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
 #define Tracking8_Switch	1			// 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
@@ -130,7 +130,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 }
 
--/**
+/**
  * @brief UART接收完成回调函数
  * @param huart: UART句柄
  * @retval None
@@ -215,34 +215,35 @@ int main(void) {
 	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
 	if (Protection_Switch)
-		while (1) {}
+		while (1) {
+		}
 
-	No_MCU_Ganv_Sensor_Init(&track_sensor);								// 初始化八路循迹传感器
-	HAL_TIM_Base_Start_IT(&htim2);										// 启动定时器2中断
-	MDrv_Init(0);													// 初始化驱动板
-	HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500);	// 启动DMA接收，若有串口数据传送需在该函数后
+	No_MCU_Ganv_Sensor_Init(&track_sensor); // 初始化八路循迹传感器
+	HAL_TIM_Base_Start_IT(&htim2); // 启动定时器2中断
+	MDrv_Init(0); // 初始化驱动板
+	HAL_UARTEx_ReceiveToIdle_DMA(&UMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收，若有串口数据传送需在该函数后
 	HAL_Delay(100);
-	MDrv_RequestVol();													// 发送获取电池电压指令
+	MDrv_RequestVol(); // 发送获取电池电压指令
 	HAL_Delay(100);
-	MDrv_UploadData(0, 0, 1);						// 获取电机编码器数据
-	LineWalking_Init();													// 初始化 PID 控制器
+	MDrv_UploadData(0, 0, 1); // 获取电机编码器数据
+	LineWalking_Init(); // 初始化 PID 控制器
 
 	if (OLED_Switch)
 		OLED_Init(&hi2c2);
 
 	if (MPU6050_Switch && !MPU6050_Init(&hi2c1)) {
 		// 初始化MPU6050
-		HAL_Delay(750);													// 延时等待稳定
-		OLED_ShowString(1, 1, "MPU6050 Init....", 8);		// OLED 显示 MPU6050 初始化信息
-		MPU6050_Calibrate_Gyro();										// 校准陀螺仪偏置 不可转动
+		HAL_Delay(750); // 延时等待稳定
+		OLED_ShowString(1, 1, "MPU6050 Init....", 8); // OLED 显示 MPU6050 初始化信息
+		MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
 	} else {
-		OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8);	// 6050错误信息提示
+		OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8); // 6050错误信息提示
 		HAL_Delay(1500);
 	}
 
 	if (OLED_Switch) {
 		OLED_Clear();
-		OLED_Debug('L', 0);								// OLED 显示 LineWalking 模块标题[Debug]
+		OLED_Debug('L', 0); // OLED 显示 LineWalking 模块标题[Debug]
 	}
 
 	/* USER CODE END 2 */
@@ -256,15 +257,16 @@ int main(void) {
 		if (MPU6050_Switch) {
 			if (mpu6050_data_ready_flag) {
 				mpu6050_data_ready_flag = 0;
-				MPU6050_Get_Angle_yaw(&MPU6050_Data);				// 获取陀螺仪数据
+				MPU6050_Get_Angle_yaw(&MPU6050_Data); // 获取陀螺仪数据
 			}
 		}
 		if (tracking_data_ready_flag) {
 			tracking_data_ready_flag = 0;
-			if (Tracking4_Switch)									// 如果打开四路循迹
+			if (Tracking4_Switch) // 如果打开四路循迹
 				LineWalking(150);
-			if (Tracking8_Switch) {									// 如果打开八路循迹
-				No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor);	// 传感器任务处理
+			if (Tracking8_Switch) {
+				// 如果打开八路循迹
+				No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor); // 传感器任务处理
 				LineWalking8_Track(track_sensor.Digtal, 200);
 			}
 		}

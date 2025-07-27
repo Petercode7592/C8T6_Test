@@ -128,8 +128,7 @@ void No_MCU_Ganv_Sensor_Init(No_MCU_Sensor *sensor) {
 void No_Mcu_Ganv_Sensor_Task_Without_tick(No_MCU_Sensor *sensor) {
     Get_Analog_value(sensor->Analog_value); // 采集数据
     convertAnalogToDigital(sensor->Analog_value, sensor->Gray_white, sensor->Gray_black, &sensor->Digtal); // 二值化处理
-    // normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black, sensor->Normal_value,
-    //                       sensor->bits); // 归一化处理
+    // normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black, sensor->Normal_value, sensor->bits); // 归一化处理
 }
 
 /* 函数功能：传感器主任务（带定时器版本）*/
@@ -140,8 +139,7 @@ void No_Mcu_Ganv_Sensor_Task_With_tick(No_MCU_Sensor *sensor) {
         Get_Analog_value(sensor->Analog_value);
         convertAnalogToDigital(sensor->Analog_value, sensor->Gray_white, sensor->Gray_black, &sensor->Digtal);
         // 定时器处不需要计算这么多
-        // normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black,
-        //                       sensor->Normal_value, sensor->bits);
+        // normalizeAnalogValues(sensor->Analog_value, sensor->Normal_factor, sensor->Calibrated_black, sensor->Normal_value, sensor->bits);
         sensor->Tick = 0; // 重置定时器
     }
 }

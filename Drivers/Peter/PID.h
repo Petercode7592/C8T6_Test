@@ -13,8 +13,6 @@ typedef struct {
     int16_t last_error;  // 上一次误差，用于计算微分
     float integral;      // 累计积分项
 
-    // —— 可选功能 ——
-
     // 积分限幅功能开关与范围
     uint8_t enable_limit;
     float I_max;

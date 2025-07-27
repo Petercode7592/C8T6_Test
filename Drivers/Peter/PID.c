@@ -27,7 +27,6 @@ void PID_Init(PID_Controller* pid, float Kp, float Ki, float Kd) {
 int16_t PID_Compute(PID_Controller* pid, int16_t error) {
     int16_t diff = error - pid->last_error;
     pid->last_error = error;
-
     pid->integral += error;
 
     if (pid->enable_limit) {
@@ -38,10 +37,8 @@ int16_t PID_Compute(PID_Controller* pid, int16_t error) {
     float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * diff;
 
     if (pid->enable_output_limit) {
-        if (output > pid->out_max)
-            output = pid->out_max;
-        if (output < pid->out_min)
-            output = pid->out_min;
+        if (output > pid->out_max) output = pid->out_max;
+        if (output < pid->out_min) output = pid->out_min;
     }
 
     return (int16_t)output;

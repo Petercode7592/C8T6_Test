@@ -244,14 +244,14 @@ void MDrv_RequestVol(void) {
     HAL_UART_Transmit(&UMUART_Cfg, (uint8_t*)"$read_vol#", 10, Uart_MaxWait);
 }
 
-/**
-  * @brief (bug)初始化驱动板
-  * @retval HAL_StatusTypeDef 返回状态
-  * @param mode 初始化模式，0表示设置电机参数，1表示仅设置不启动
-  * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时>150ms,收到HAL_OK只代表发出去不代表已经MD收到
-  * @bug 1. 设置电机速度无论延迟多少都无法正确设置，可能要收到单片机回传的正确时间
-  * @bug 2. 死区值需要测量得出，不能随意设置
-  */
+    /**
+      * @brief (bug)初始化驱动板
+      * @retval HAL_StatusTypeDef 返回状态
+      * @param mode 初始化模式，0表示设置电机参数，1表示仅设置不启动
+      * @note 该函数会设置电机类型、相位线、车轮直径和速度等参数。为确保设置生效各命令延时>150ms,收到HAL_OK只代表发出去不代表已经MD收到
+      * @bug 1. 设置电机速度无论延迟多少都无法正确设置，可能要收到单片机回传的正确时间
+      * @bug 2. 死区值需要测量得出，不能随意设置
+      */
 void MDrv_Init(int mode) {
     //  0.05,0.2,0.95 优秀值
     // 1.5 0.15 1.8
