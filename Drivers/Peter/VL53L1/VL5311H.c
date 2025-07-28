@@ -1,98 +1,142 @@
-/* vl53l1x.c - VL53L1X 激光测距传感器驱动源文件 */
 #include "VL5311H.h"
 
-/* 内部静态变量保存 I2C 接口句柄和传感器状态 */
-static I2C_HandleTypeDef *vl53l1x_hi2c = NULL;
-static uint8_t vl53l1x_running = 0;                     // 标记传感器是否在连续测量中
-static const uint16_t vl53l1x_dev = VL53L1X_I2C_ADDR;   // 设备I2C地址 (dev参数)
+// 存储用于 VL53L1X 通信的 I2C 句柄指针
+I2C_HandleTypeDef *vl53l1x_hi2c = NULL;
 
-/**
-  * @brief  传感器初始化实现
-  */
-uint8_t VL53L1X_Init(I2C_HandleTypeDef *hi2c) {
-    vl53l1x_hi2c = hi2c;  // 保存I2C句柄供后续低层I2C读写使用
+// VL53L1X 默认I2C地址（7位地址0x29, 在代码中使用8位地址0x52）
+#define VL53L1X_I2C_ADDR (0x52) /**< VL53L1X 默认I2C地址 (上电后默认0x52) */
 
-    /* 1. 等待传感器上电后完成Boot */
-    uint8_t bootState = 0;
-    uint32_t timeout = 0;
-    while (bootState == 0 && timeout < 500) {
-        VL53L1X_BootState(vl53l1x_dev, &bootState);
-        HAL_Delay(2);
-        timeout += 2;
-    }
-    // 检查传感器是否启动成功
-    if (bootState == 0) {
-        return 1;  // 超时错误: 传感器未在预期时间内启动
-    }
+// 定义并初始化全局数据就绪标志位
+volatile uint8_t vl53l1x_data_ready = 0;
 
-    /* 2. 调用VL53L1X库的初始化，将传感器配置为默认模式 */
-    VL53L1X_SensorInit(vl53l1x_dev);
-    // 默认配置：10Hz测量频率，长距离模式，Timing Budget=100ms:contentReference[oaicite:8]{index=8}:contentReference[oaicite:9]{index=9}
+VL53L1X_ERROR VL53L1X_Init(I2C_HandleTypeDef *hi2c, VL53L1X_DistanceMode mode, uint16_t timing_budget_ms) {
+	VL53L1X_ERROR status = 0;
+	uint8_t bootState = 0;
+	uint16_t dev = VL53L1X_I2C_ADDR; // 传感器 I2C 设备地址 (使用 ST 驱动时作为 dev 参数)
 
-    /* 3. 启动连续测距 */
-    VL53L1X_StartRanging(vl53l1x_dev);  // 开始连续测距（传感器将按默认10Hz输出距离）
-    vl53l1x_running = 1;               // 标记传感器测距已启动
+	// 保存 I2C 句柄用于后续通信 (假定 ST API 的底层实现需要此全局句柄)
+	vl53l1x_hi2c = hi2c;
 
-    return 0; // 初始化成功
+	// 1. 等待传感器启动完成（引导完成）
+	// 读取传感器启动状态，等待 BootState = 1
+	for (int retry = 0; retry < 100; ++retry) {
+		status = VL53L1X_BootState(dev, &bootState);
+		if (status != 0) {
+			// 通信错误则直接返回错误状态
+			return status;
+		}
+		if (bootState == 1) {
+			break; // 传感器已经启动
+		}
+		HAL_Delay(2); // 等待2ms后重试
+	}
+
+	if (bootState == 0) {
+		// 若循环结束仍未启动，则返回错误
+		return 1; // 返回非0错误码，表示传感器未就绪
+	}
+
+	// 2. 初始化传感器（加载默认配置，默认长距离模式10Hz）
+	status = VL53L1X_SensorInit(dev);
+	if (status != 0) {
+		return status;
+	}
+
+	// 3. 设置测距模式和测量时间参数
+	// 距离模式：短距 or 长距
+	status = VL53L1X_SetDistanceMode(dev, (uint16_t) mode);
+	if (status != 0) {
+		return status;
+	}
+	// 设置测距时间预算（Timing Budget）
+	status = VL53L1X_SetTimingBudgetInMs(dev, timing_budget_ms);
+	if (status != 0) {
+		return status;
+	}
+	// 设置连续测量的间隔时间（确保间隔 >= 时间预算）
+	uint32_t inter_measurement = timing_budget_ms; // 此处将间隔设为等于时间预算，以实现最大速度
+	if (inter_measurement < timing_budget_ms) {
+		inter_measurement = timing_budget_ms;
+	}
+	status = VL53L1X_SetInterMeasurementInMs(dev, inter_measurement);
+	if (status != 0) {
+		return status;
+	}
+
+	// 4. 配置中断引脚极性为低电平有效（默认为高电平有效，需要改为0）
+	status = VL53L1X_SetInterruptPolarity(dev, 0);
+	if (status != 0) {
+		return status;
+	}
+
+	// 5. 启动连续测距
+	status = VL53L1X_StartRanging(dev);
+	// 如果启动测距返回成功，传感器将开始连续测量，此后每完成一次测距测量，
+	// VL53L1X的GPIO中断引脚将被拉低(低电平有效)，需要用户在中断回调中设置标志位。
+
+	return status;
 }
 
-/**
-  * @brief  读取当前测量距离
-  */
-uint16_t VL53L1X_ReadDistance(void) {
-    uint8_t dataReady = 0;
-    uint16_t distance = 0;
+VL53L1X_ERROR VL53L1X_ReadDistance(uint16_t *pDistance) {
+	uint16_t dev = VL53L1X_I2C_ADDR;
+	VL53L1X_ERROR status;
 
-    /* 若采用轮询方式，则等待数据准备好 */
-    if (!vl53l1x_running) {
-        // 如未开始测距则无法读取，直接返回0
-        return 0;
-    }
-    while (dataReady == 0) {
-        VL53L1X_CheckForDataReady(vl53l1x_dev, &dataReady);
-        HAL_Delay(5);  // 小延时避免占用过多CPU
-    }
+	// 读取测量的距离数据（毫米）
+	status = VL53L1X_GetDistance(dev, pDistance);
+	if (status != 0) {
+		return status; // 若读取失败，返回错误状态
+	}
 
-    /* 数据准备好后，读取距离数据 */
-    VL53L1X_GetDistance(vl53l1x_dev, &distance);
-    /* 清除中断标志，准备接收下一次测量数据:contentReference[oaicite:10]{index=10} */
-    VL53L1X_ClearInterrupt(vl53l1x_dev);
+	// 清除传感器内部中断，以便传感器进入下一次测距并再次触发中断引脚
+	status = VL53L1X_ClearInterrupt(dev);
+	if (status != 0) {
+		return status;
+	}
 
-    return distance;  // 返回测得的距离（毫米）
+	// 重置数据就绪标志，表示本次数据已处理
+	vl53l1x_data_ready = 0;
+
+	return 0; // 成功读取则返回0
 }
 
-/**
-  * @brief  配置测量模式（距离模式/TimingBudget/测量间隔）
-  */
-uint8_t VL53L1X_SetMeasurementMode(uint8_t distanceMode, uint32_t timingBudgetMs, uint32_t interMeasurementMs) {
-    VL53L1X_ERROR status = 0;
+VL53L1X_ERROR VL53L1X_SetMeasurementMode(VL53L1X_DistanceMode mode, uint16_t timing_budget_ms,
+										 uint32_t inter_measurement_ms) {
+	uint16_t dev = VL53L1X_I2C_ADDR;
+	VL53L1X_ERROR status = 0;
 
-    /* 若当前正在测量，则先停止测距，以便安全地更新配置 */
-    if (vl53l1x_running) {
-        VL53L1X_StopRanging(vl53l1x_dev);
-        vl53l1x_running = 0;
-    }
+	// 如果需要修改配置，建议先停止连续测距再修改
+	status = VL53L1X_StopRanging(dev);
+	if (status != 0) {
+		// 若停止测距失败，可能传感器未在测距，或者出现错误，尝试继续配置
+		// 我们这里不强制返回，让后续配置继续进行
+		status = 0;
+	}
 
-    /* 1. 设置距离模式: 1=短距离模式, 2=长距离模式 */
-    status |= VL53L1X_SetDistanceMode(vl53l1x_dev, distanceMode);
-    /* 确保Timing Budget满足模式要求: 短距离模式允许最短15ms，长距离模式最短33ms:contentReference[oaicite:11]{index=11} */
-    if (distanceMode == 1 && timingBudgetMs < 15) {
-        timingBudgetMs = 15;
-    } else if (distanceMode == 2 && timingBudgetMs < 33) {
-        timingBudgetMs = 33;
-    }
+	// 设置新的距离模式（1=短距，2=长距）
+	status = VL53L1X_SetDistanceMode(dev, (uint16_t) mode);
+	if (status != 0) {
+		return status;
+	}
+	// 设置测距时间预算
+	status = VL53L1X_SetTimingBudgetInMs(dev, timing_budget_ms);
+	if (status != 0) {
+		return status;
+	}
+	// 确保间隔时间不小于测距时间预算
+	if (inter_measurement_ms < timing_budget_ms) {
+		inter_measurement_ms = timing_budget_ms;
+	}
+	status = VL53L1X_SetInterMeasurementInMs(dev, inter_measurement_ms);
+	if (status != 0) {
+		return status;
+	}
 
-    /* 2. 设置测量Timing Budget（单次测量周期） */
-    status |= VL53L1X_SetTimingBudgetInMs(vl53l1x_dev, timingBudgetMs);
-    /* 3. 设置测量间隔（两次测量启动之间的间隔），需>= Timing Budget:contentReference[oaicite:12]{index=12} */
-    if (interMeasurementMs < timingBudgetMs) {
-        interMeasurementMs = timingBudgetMs;
-    }
-    status |= VL53L1X_SetInterMeasurementInMs(vl53l1x_dev, interMeasurementMs);
+	// 清除之前可能未处理的中断标志，避免误触发
+	vl53l1x_data_ready = 0;
+	// （可选）读取并清除一次传感器中断，以防上一次测距的中断遗留
+	VL53L1X_ClearInterrupt(dev);
 
-    /* 4. 重新启动连续测距 */
-    status |= VL53L1X_StartRanging(vl53l1x_dev);
-    vl53l1x_running = 1;
-
-    return (uint8_t)status;
+	// 重新启动连续测距，使新配置生效
+	status = VL53L1X_StartRanging(dev);
+	return status;
 }

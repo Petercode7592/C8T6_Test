@@ -9,12 +9,13 @@
   *
   ******************************************************************************
   */
-  
+
+
 /**
  * @file  vl53l1_platform.h
  * @brief Those platform functions are platform dependent and have to be implemented by the user
  */
- 
+
 #ifndef _VL53L1_PLATFORM_H_
 #define _VL53L1_PLATFORM_H_
 
