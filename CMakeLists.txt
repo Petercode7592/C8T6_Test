@@ -38,8 +38,6 @@ enable_language(C ASM)
 add_executable(${CMAKE_PROJECT_NAME}
         Drivers/Peter/Mdrv.h
         Drivers/Peter/Mdrv.c
-        Drivers/Peter/Four_LineWalking.c
-        Drivers/Peter/Four_LineWalking.h
         Drivers/Peter/MPU6050.c
         Drivers/Peter/MPU6050.h
         Drivers/Peter/Display/OLED/Oled.c
@@ -61,6 +59,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         Drivers/Peter/VL53L1/VL5311H.h
         Drivers/Peter/VL53L1/VL53L1X_api.c
         Drivers/Peter/VL53L1/vl53l1_platform.c
+        Drivers/Peter/VL53L1/vl53l1_error_codes.h
 )
 
 # Add STM32CubeMX generated sources
