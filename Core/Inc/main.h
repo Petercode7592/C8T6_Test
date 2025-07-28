@@ -64,6 +64,7 @@ void Error_Handler(void);
 #define UUSART_RX_GPIO_Port GPIOA
 #define VL53L1X_EXTI_Pin GPIO_PIN_4
 #define VL53L1X_EXTI_GPIO_Port GPIOA
+#define VL53L1X_EXTI_EXTI_IRQn EXTI4_IRQn
 #define Track8_AD2_Pin GPIO_PIN_7
 #define Track8_AD2_GPIO_Port GPIOA
 #define Track8_AD0_Pin GPIO_PIN_0
