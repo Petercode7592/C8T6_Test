@@ -5,10 +5,12 @@
 #include "Display/OLED/Oled.h"
 
 // 权重表：中线为负，越靠外权重越大（正负对称）
+
 static const int8_t sensor_weight[8] = {35, 25, 15, 5, -5, -15, -25, -35};
 static PID_Controller line_pid;
 static int16_t last_valid_error = 0; // 用于掉线方向记忆
 static int16_t last_digital = -1;     // 上一帧有效数据（用于掉线恢复）
+#define RotSpeed 150 // 旋转速度
 
 /**
  * @brief 初始化PID控制器（用于循迹）
@@ -57,10 +59,8 @@ void LineWalking8_Track(uint8_t track_digital, int16_t speed) {
     // 掉线检测2：启动掉线恢复任务（全为1表示所有都是白线）
     // 掉线处理：全白时根据 last_digital 判断是否刚刚发生跳变
     if (track_digital == 0xFF) {
-        if (last_digital != 0xFF && last_digital != -1) {
-            // 掉线前有信息，触发带方向的找线逻辑
-            Motion_Spin((last_valid_error >= 0) ? 150 : -150);
-        }
+        if (last_digital != 0xFF && last_digital != -1) // 掉线前有信息，触发带方向的找线逻辑
+            Motion_Spin((last_valid_error >= 0) ? RotSpeed : -1*RotSpeed);
         if (last_digital != -1) // 掉线后不再处理，等待下一次有效数据 刚启动让其继续走
             return;
     }
