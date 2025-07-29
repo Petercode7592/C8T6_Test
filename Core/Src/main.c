@@ -53,7 +53,7 @@ int16_t tim2_tick = 0; // 定时器2滴答计数器
 /* USER CODE BEGIN PD */
 #define Protection_Switch 0 // 1:防止SweetBaby		0:关闭 Protection 模块
 
-#define Debug_Switch 0 // 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口 (Development Only)
+#define Debug_Switch 1 // 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口 (Development Only)
 
 #define Tracking4_Switch 0 // 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
 #define Tracking8_Switch 0 // 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
@@ -140,7 +140,7 @@ void Uart_JudgeDataType(char *Udata) {
 	if (strncmp(Udata, "$", 1) == 0) {
 		if (strncmp(Udata, "$K230:", 6) == 0) {
 			K230_ProcessData(Udata + 6);
-		}else if (strncmp(Udata, "$MAll:", 6) == 0) {
+		} else if (strncmp(Udata, "$MAll:", 6) == 0) {
 			MDrv_ProcessMALL(Udata + 6);
 		} else if (strncmp(Udata, "$MTEP:", 6) == 0) {
 			MDrv_ProcessMTEP(Udata + 6);
@@ -241,8 +241,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART2_UART_Init();
   MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_ADC1_Init();
@@ -252,18 +252,19 @@ int main(void)
 		while (1) {
 		}
 
-
 	No_MCU_Ganv_Sensor_Init(&track_sensor); // 初始化八路循迹传感器
 	HAL_TIM_Base_Start_IT(&htim2); // 启动定时器2中断
 
 	MDrv_Init(0); // 初始化驱动板
 
+	// 使用HAL库自带的HAL_UARTEx_ReceiveToIdle_DMA()函数
+	// 当DMA触发了半满中断或全满中断时，同样是会进入函数到HAL_DMA_IRQHandler()的 ，区别在于调用的回调函数不同了。以半满中断为例：
 	HAL_UARTEx_ReceiveToIdle_DMA(&PCUMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收，若有串口数据传送需在该函数后
 
 	HAL_Delay(100);
 	MDrv_RequestVol(); // 发送获取电池电压指令
 	HAL_Delay(100);
-	MDrv_UploadData(0, 0, 1); // 获取电机编码器数据
+	MDrv_UploadData(0, 1, 1); // 获取电机编码器数据
 
 	LineWalking_Init(); // 初始化 PID 控制器
 
@@ -290,7 +291,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1) {
-		OLED_Debug(1); // OLED 显示 LineWalking 数据
+		OLED_Debug(1); // OLED 显示 Debug 数据
 		if (MPU6050_Switch) {
 			if (mpu6050_data_ready_flag) {
 				mpu6050_data_ready_flag = 0;
