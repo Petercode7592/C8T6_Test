@@ -129,7 +129,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 	// 这个回调函数会在接收到数据时被调用
 	if (huart->Instance == PCUMUART_Cfg.Instance) {
 		UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
-		uart1_rec_data_ready_flag = 1; // 设置串口1接收数据就绪标志
+		Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
 		HAL_UARTEx_ReceiveToIdle_DMA(&PCUMUART_Cfg, UsrtDataBuff, 500); // 继续接收字节
 	}
 }
@@ -310,10 +310,7 @@ int main(void)
 			}
 		}
 
-		if (uart1_rec_data_ready_flag) {
-			Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
-			uart1_rec_data_ready_flag = 0; // 重置接收数据就绪标志
-		}
+
 	}
     /* USER CODE END WHILE */
 
