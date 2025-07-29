@@ -33,7 +33,6 @@
 #include "Ganv_Grayscale_Sensor_Config.h"
 #include "MDrv.h"
 #include "MPU6050.h"
-#include "VL53L1/VL5311H.h"
 #include "string.h"
 /* USER CODE END Includes */
 
@@ -56,7 +55,7 @@ int16_t tim2_tick = 0; // 定时器2滴答计数器
 
 #define Tracking4_Switch 0 // 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
 #define Tracking8_Switch 0 // 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
-#define MPU6050_Switch 0 // 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
+#define MPU6050_Switch 1 // 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
 #define OLED_Switch 1 // 1:开启 OLED 模块		0:关闭 OLED 模块
 
 #define Tracking4_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
@@ -111,9 +110,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		mpu6050_data_ready_flag = 1;
 	if (Tracking4_Switch && (GPIO_Pin & Tracking4_Pin))
 		tracking_data_ready_flag = 1;
-	if (GPIO_Pin == VL53L1X_EXTI_Pin) {
-		vl53l1x_data_ready = 1;
-	}
+	// if (GPIO_Pin == VL53L1X_EXTI_Pin) {
+	// 	vl53l1x_data_ready = 1;
+	// }
 }
 
 /**
@@ -224,9 +223,7 @@ int main(void) {
 		while (1) {
 		}
 
-	if (!VL53L1X_Init(&hi2c1, 1, 100)) {
-		// 初始化 VL53L1X 传感器
-	}
+
 	No_MCU_Ganv_Sensor_Init(&track_sensor); // 初始化八路循迹传感器
 	HAL_TIM_Base_Start_IT(&htim2); // 启动定时器2中断
 
@@ -283,12 +280,7 @@ int main(void) {
 			}
 		}
 
-		if (vl53l1x_data_ready) {
-			vl53l1x_data_ready = 0; // 清除数据就绪标志
-			uint16_t distance = 0;
-			VL53L1X_ReadDistance(&distance); // 读取距离数据
-			OLED_ShowNum(1, 1, distance, 3, 8); // OLED 显示距离数据
-		}
+		HAL_UART_Transmit(&PCUMUART_Cfg, &MPU6050_Data.YawAngle, sizeof(MPU6050_Data.YawAngle), Uart_MaxWait); // 发送陀螺仪角度数据
 	}
 	/* USER CODE END WHILE */
 
