@@ -33,6 +33,7 @@
 #include "Ganv_Grayscale_Sensor_Config.h"
 #include "MDrv.h"
 #include "MPU6050.h"
+#include "motion_control.h"
 #include "string.h"
 /* USER CODE END Includes */
 
@@ -40,6 +41,7 @@
 /* USER CODE BEGIN PTD */
 volatile uint8_t mpu6050_data_ready_flag = 0; // 6050 数据就绪标志(中断)
 volatile uint8_t tracking_data_ready_flag = 1; // =1 让其先触发一次
+volatile uint8_t uart1_rec_data_ready_flag = 0; // 串口1接收数据就绪标志
 unsigned char UsrtDataBuff[500]; // 用于接收串口的数据
 unsigned char rx_buff[256] = {0}; // 发送缓冲区
 No_MCU_Sensor track_sensor; // 创建一个传感器对象
@@ -77,6 +79,7 @@ int16_t tim2_tick = 0; // 定时器2滴答计数器
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+void OLED_Debug(uint8_t showtype);
 void Uart_JudgeDataType(char *Udata);
 void K230_ProcessData(char *Udata);
 /* USER CODE END PFP */
@@ -126,7 +129,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 	// 这个回调函数会在接收到数据时被调用
 	if (huart->Instance == PCUMUART_Cfg.Instance) {
 		UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
-		Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
+		uart1_rec_data_ready_flag = 1; // 设置串口1接收数据就绪标志
 		HAL_UARTEx_ReceiveToIdle_DMA(&PCUMUART_Cfg, UsrtDataBuff, 500); // 继续接收字节
 	}
 }
@@ -149,11 +152,33 @@ void Uart_JudgeDataType(char *Udata) {
 	}
 }
 
+// K230 数据处理函数
 void K230_ProcessData(char *Udata) {
+	char cmd_type[20];
+	char result[20];
+	float score;
 
+	// 使用 sscanf 解析指令
+	if (sscanf(Udata, "%19[^,],%19[^,],%f#", cmd_type, result, &score) == 3) {
+		// 根据 cmd_type 进行不同操作
+		if (strcmp(cmd_type, "car") == 0) {
+			if (strcmp(result, "F") == 0)
+				Motion_Forward(150); // 处理前进命令 假设前进速度为 100
+			else if (strcmp(result, "B") == 0)
+				Motion_Backward(150); // 处理后退命令 假设后退速度为 100
+			else if (strcmp(result, "L") == 0)
+				Motion_Spin(-150); // 处理左转命令 假设左转速度为 100
+			else if (strcmp(result, "R") == 0)
+				Motion_Spin(150); // 处理右转命令 假设右
+			else if (strcmp(result, "S") == 0)
+				Motion_Stop_WithoutPID();
+			else if (strcmp(result, "SP") == 0)
+				Motion_Stop_WithPID();
+		}
+	}
 }
 
-void OLED_Debug(char mode, uint8_t showtype) {
+void OLED_Debug(uint8_t showtype) {
 	if (showtype == 0) {
 		if (MPU6050_Switch)
 			OLED_ShowString(1, 1, "6050", 8);
@@ -164,10 +189,12 @@ void OLED_Debug(char mode, uint8_t showtype) {
 	} else if (showtype == 1) {
 		if (MPU6050_Switch)
 			OLED_ShowFloat(1, 2, MPU6050_Data.YawAngle, 3, 2, 8);
+		// 显示速度调试
 		OLED_ShowFloat(45, 2, Mdrv_Readspeed(0), 3, 1, 8);
 		OLED_ShowFloat(45, 3, Mdrv_Readspeed(1), 3, 1, 8);
 		OLED_ShowFloat(45, 4, Mdrv_Readspeed(2), 3, 1, 8);
 		OLED_ShowFloat(45, 5, Mdrv_Readspeed(3), 3, 1, 8);
+		// 显示驱动板电池电压
 		OLED_ShowFloat(80, 7, Voltage, 1, 2, 8);
 		// 显示 LineWalking 数据
 		if (Tracking8_Switch) {
@@ -255,7 +282,7 @@ int main(void)
 
 	if (OLED_Switch) {
 		OLED_Clear();
-		OLED_Debug('N', 0); // OLED 显示 LineWalking 模块标题[Debug]
+		OLED_Debug(0); // OLED 显示 LineWalking 模块标题[Debug]
 	}
 
   /* USER CODE END 2 */
@@ -263,7 +290,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1) {
-		OLED_Debug('N', 1); // OLED 显示 LineWalking 数据
+		OLED_Debug(1); // OLED 显示 LineWalking 数据
 		if (MPU6050_Switch) {
 			if (mpu6050_data_ready_flag) {
 				mpu6050_data_ready_flag = 0;
@@ -280,6 +307,11 @@ int main(void)
 				No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor); // 传感器任务处理
 				LineWalking8_Track(track_sensor.Digtal, 200);
 			}
+		}
+
+		if (uart1_rec_data_ready_flag) {
+			Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
+			uart1_rec_data_ready_flag = 0; // 重置接收数据就绪标志
 		}
 	}
     /* USER CODE END WHILE */
