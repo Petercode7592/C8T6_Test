@@ -1,7 +1,7 @@
 <component name="DebugServers">
   <generic-debug-target name="泛型" uniqueID="54cc145b-36fc-4b9e-87a6-fce74354e3e7">
     <debugger version="1">
-      <debugger toolchainName="STM32CubeCLT" />
+      <debugger kind="GDB" isBundled="true" />
       <env />
     </debugger>
     <gdbserver exe="C:/ST/STM32CubeIDE_1.18.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.0.202411081344/tools/bin/arm-none-eabi-gdb.exe" enabled="false" live-watches-enabled="true">

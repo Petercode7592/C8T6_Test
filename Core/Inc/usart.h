@@ -51,7 +51,7 @@ void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
-#define Uart_MaxWait (uint32_t)25  // 传输时间 = 字节数 × 10位 / 波特率 (10位=1+8+0+1)  30ms 建议100B内
+#define Uart_MaxWait (uint32_t)40  // 传输时间 = 字节数 × 10位 / 波特率 (10位=1+8+0+1)  30ms 建议100B内
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

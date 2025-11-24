@@ -42,8 +42,7 @@
 volatile uint8_t mpu6050_data_ready_flag = 0; // 6050 数据就绪标志(中断)
 volatile uint8_t tracking_data_ready_flag = 1; // =1 让其先触发一次
 volatile uint8_t uart1_rec_data_ready_flag = 0; // 串口1接收数据就绪标志
-unsigned char UsrtDataBuff[500]; // 用于接收串口的数据
-unsigned char rx_buff[256] = {0}; // 发送缓冲区
+unsigned char UsrtDataBuff[200]; // 用于接收串口的数据
 No_MCU_Sensor track_sensor; // 创建一个传感器对象
 MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 int16_t tim2_tick = 0; // 定时器2滴答计数器
@@ -56,8 +55,8 @@ int16_t tim2_tick = 0; // 定时器2滴答计数器
 #define Debug_Switch 1 // 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口 (Development Only)
 
 #define Tracking4_Switch 0 // 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
-#define Tracking8_Switch 0 // 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
-#define MPU6050_Switch 1 // 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
+#define Tracking8_Switch 1 // 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
+#define MPU6050_Switch 0 // 1:开启 MPU6050 模块	0:关闭 MPU6050 模块
 #define OLED_Switch 1 // 1:开启 OLED 模块		0:关闭 OLED 模块
 
 #define Tracking4_Pin (GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15)
@@ -130,7 +129,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 	if (huart->Instance == PCUMUART_Cfg.Instance) {
 		UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
 		Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
-		HAL_UARTEx_ReceiveToIdle_DMA(&PCUMUART_Cfg, UsrtDataBuff, 500); // 继续接收字节
+		HAL_UARTEx_ReceiveToIdle_DMA(&PCUMUART_Cfg, UsrtDataBuff, 200); // 继续接收字节
 	}
 }
 
@@ -261,10 +260,12 @@ int main(void)
 	// 当DMA触发了半满中断或全满中断时，同样是会进入函数到HAL_DMA_IRQHandler()的 ，区别在于调用的回调函数不同了。以半满中断为例：
 	HAL_UARTEx_ReceiveToIdle_DMA(&PCUMUART_Cfg, UsrtDataBuff, 500); // 启动DMA接收，若有串口数据传送需在该函数后
 
-	HAL_Delay(100);
+	HAL_Delay(250);
 	MDrv_RequestVol(); // 发送获取电池电压指令
-	HAL_Delay(100);
-	MDrv_UploadData(0, 1, 1); // 获取电机编码器数据
+	HAL_Delay(500);
+	MDrv_UploadData(0, 0, 1); // 获取电机编码器数据
+	HAL_Delay(500);
+
 
 	LineWalking_Init(); // 初始化 PID 控制器
 
@@ -382,8 +383,7 @@ void Error_Handler(void)
 	}
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

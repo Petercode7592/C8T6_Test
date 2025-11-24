@@ -23,7 +23,7 @@ float Voltage = 0.0f; // 电池电压
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_Reset(void) {
-    return HAL_UART_Transmit(&PCUMUART_Cfg, "$flash_reset#", 13, Uart_MaxWait);
+    return HAL_UART_Transmit(&PCUMUART_Cfg, "$flash_reset#\r\n", 13, Uart_MaxWait);
 }
 
 /** @brief 配置电机类型
@@ -32,8 +32,8 @@ HAL_StatusTypeDef MDrv_Reset(void) {
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype) {
-    char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mtype:%d#", mtype);
+    char cmd[20];
+    snprintf(cmd, sizeof(cmd), "$mtype:%d#\r\n", mtype);
     return HAL_UART_Transmit(&PCUMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -44,8 +44,8 @@ HAL_StatusTypeDef MDrv_SetMtype(uint8_t mtype) {
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetMline(uint8_t mline) {
-    char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mline:%d#", mline); // 发送指令
+    char cmd[20];
+    snprintf(cmd, sizeof(cmd), "$mline:%d#\r\n", mline); // 发送指令
     return HAL_UART_Transmit(&PCUMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -56,8 +56,8 @@ HAL_StatusTypeDef MDrv_SetMline(uint8_t mline) {
   * @retval HAL_StatusTypeDef 返回状态
   */
 HAL_StatusTypeDef MDrv_SetMphase(uint8_t mphase) {
-    char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$mphase:%d#", mphase); // 发送指令
+    char cmd[20];
+    snprintf(cmd, sizeof(cmd), "$mphase:%d#\r\n", mphase); // 发送指令
     return HAL_UART_Transmit(&PCUMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -71,7 +71,7 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone) {
     char cmd[25];
     if (deadzone <= 3600) {
         // 确保死区值在0到3600之间
-        snprintf(cmd, sizeof(cmd), "$deadzone:%ld#", deadzone); // 发送指令
+        snprintf(cmd, sizeof(cmd), "$deadzone:%ld#\r\n", deadzone); // 发送指令
         return HAL_UART_Transmit(&PCUMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
     }
     return HAL_ERROR; // 错误处理
@@ -85,7 +85,7 @@ HAL_StatusTypeDef MDrv_SetDeadzone(uint32_t deadzone) {
   */
 HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
     char cmd[25];
-    snprintf(cmd, sizeof(cmd), "$wdiameter:%d#", wdiameter); // 发送指令
+    snprintf(cmd, sizeof(cmd), "$wdiameter:%d#\r\n", wdiameter); // 发送指令
     return HAL_UART_Transmit(&PCUMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -100,7 +100,7 @@ HAL_StatusTypeDef MDrv_SetWdiameter(uint8_t wdiameter) {
 HAL_StatusTypeDef MDrv_SetPID(float p, float i, float d) {
     // 发送指令
     char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#", p, i, d);
+    snprintf(cmd, sizeof(cmd), "$MPID:%f,%f,%f#\r\n", p, i, d);
     return HAL_UART_Transmit(&PCUMUART_Cfg, cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -118,7 +118,7 @@ HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t V
         return HAL_ERROR; // 错误处理，速度值超出范围
     }
 
-    int cmd_len = snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#", Vm1, Vm2, Vm3, Vm4);
+    int cmd_len = snprintf(cmd, sizeof(cmd), "$spd:%d,%d,%d,%d#\r\n", Vm1, Vm2, Vm3, Vm4);
 
     // 健壮性检查：检查 snprintf 是否成功并且没有截断
     if (cmd_len < 0 || cmd_len >= sizeof(cmd)) {
@@ -141,7 +141,7 @@ HAL_StatusTypeDef MDrv_SetSpeed(int32_t Vm1, int32_t Vm2, int32_t Vm3, int32_t V
   */
 HAL_StatusTypeDef MDrv_SetPWM(int32_t pwm1, int32_t pwm2, int32_t pwm3, int32_t pwm4) {
     char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#", pwm1, pwm2, pwm3, pwm4);
+    snprintf(cmd, sizeof(cmd), "$pwm:%d,%d,%d,%d#\r\n", pwm1, pwm2, pwm3, pwm4);
     return HAL_UART_Transmit(&PCUMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -156,8 +156,8 @@ HAL_StatusTypeDef MDrv_SetPWM(int32_t pwm1, int32_t pwm2, int32_t pwm3, int32_t 
 HAL_StatusTypeDef MDrv_UploadData(uint8_t mall_en,  uint8_t mtep_en, uint8_t mspd_en) {
     // 发送上传数据指令
     // 假设mall, mtep, mspd是需要上传的数据 相应变量赋值1代表回传该部分的数据
-    char cmd[50];
-    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#", mall_en, mtep_en, mspd_en);
+    char cmd[30];
+    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#\r\n", mall_en, mtep_en, mspd_en);
     return HAL_UART_Transmit(&PCUMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -241,7 +241,7 @@ void MDrv_ProcessVol(char *data) {
   * @retval void
   */
 void MDrv_RequestVol(void) {
-    HAL_UART_Transmit(&PCUMUART_Cfg, (uint8_t*)"$read_vol#", 10, Uart_MaxWait);
+    HAL_UART_Transmit(&PCUMUART_Cfg, (uint8_t*)"$read_vol#\r\n", 10, Uart_MaxWait);
 }
 
     /**
@@ -257,15 +257,15 @@ void MDrv_Init(int mode) {
     // 1.5 0.15 1.8
     if (mode == 0) {
         MDrv_SetMtype(2);       // 设置为310电机
-        HAL_Delay(125);
+        HAL_Delay(225);
         MDrv_SetMline(13);      // 设置电机的相位线
-        HAL_Delay(125);
+        HAL_Delay(225);
         MDrv_SetMphase(20);     // 设置电机的减速比
-        HAL_Delay(125);
+        HAL_Delay(225);
         MDrv_SetWdiameter(48);  // 设置车轮直径
-        HAL_Delay(125);
+        HAL_Delay(165);
         MDrv_SetDeadzone(1200); // 设置电机的pwm脉冲死区,需要测量得出
-        HAL_Delay(125);
+        HAL_Delay(165);
     }
     MDrv_SetPWM(0, 0, 0, 0); // 设置电机的PWM值为0，确保电机停止
     HAL_Delay(100);
