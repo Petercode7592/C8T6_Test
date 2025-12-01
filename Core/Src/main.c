@@ -41,8 +41,8 @@
 /* USER CODE BEGIN PTD */
 volatile uint8_t mpu6050_data_ready_flag = 0; // 6050 数据就绪标志(中断)
 volatile uint8_t tracking_data_ready_flag = 1; // =1 让其先触发一次
-volatile uint8_t uart1_rec_data_ready_flag = 0; // 串口1接收数据就绪标志
-unsigned char UsrtDataBuff[200]; // 用于接收串口的数据
+volatile uint8_t uart1_rec_data_ready_flag = 1; // 串口1接收数据就绪标志
+char UsrtDataBuff[200]; // 用于接收串口的数据
 No_MCU_Sensor track_sensor; // 创建一个传感器对象
 MPU6050_Data_t MPU6050_Data; // 定义一个MPU6050数据结构体实例
 int16_t tim2_tick = 0; // 定时器2滴答计数器
@@ -52,7 +52,7 @@ int16_t tim2_tick = 0; // 定时器2滴答计数器
 /* USER CODE BEGIN PD */
 #define Protection_Switch 0 // 1:防止SweetBaby		0:关闭 Protection 模块
 
-#define Debug_Switch 1 // 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口 (Development Only)
+#define Debug_Switch 0 // 1:开启 Debug 输出到串口 0:关闭 Debug 输出到串口 (Development Only)
 
 #define Tracking4_Switch 0 // 1:开启 四路巡线 模块	0:关闭 LineWalking 模块
 #define Tracking8_Switch 1 // 1:开启 八路巡线 模块	0:关闭 Tracking8 模块
@@ -128,7 +128,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 	// 这个回调函数会在接收到数据时被调用
 	if (huart->Instance == PCUMUART_Cfg.Instance) {
 		UsrtDataBuff[Size - 1] = '\0'; // 确保字符串结束
-		Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
+		uart1_rec_data_ready_flag = 1;
+		// Uart_JudgeDataType(UsrtDataBuff); // [Debug 删除调速函数]处理接收到的数据
 		HAL_UARTEx_ReceiveToIdle_DMA(&PCUMUART_Cfg, UsrtDataBuff, 200); // 继续接收字节
 	}
 }
@@ -262,10 +263,9 @@ int main(void)
 
 	HAL_Delay(250);
 	MDrv_RequestVol(); // 发送获取电池电压指令
-	HAL_Delay(500);
+	HAL_Delay(400);
 	MDrv_UploadData(0, 0, 1); // 获取电机编码器数据
 	HAL_Delay(500);
-
 
 	LineWalking_Init(); // 初始化 PID 控制器
 
@@ -278,8 +278,8 @@ int main(void)
 		OLED_ShowString(1, 1, "MPU6050 Init....", 8); // OLED 显示 MPU6050 初始化信息
 		MPU6050_Calibrate_Gyro(); // 校准陀螺仪偏置 不可转动
 	} else {
-		OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8); // 6050错误信息提示
-		HAL_Delay(1500);
+		// OLED_ShowString(1, 2, "MPU6050 Err or OFF!", 8); // 6050错误信息提示
+		// HAL_Delay(1500);
 	}
 
 	if (OLED_Switch) {
@@ -300,6 +300,11 @@ int main(void)
 			}
 		}
 
+		if (uart1_rec_data_ready_flag) {
+			uart1_rec_data_ready_flag = 0;
+			Uart_JudgeDataType(UsrtDataBuff); // 处理接收到的数据
+		}
+
 		if (tracking_data_ready_flag) {
 			tracking_data_ready_flag = 0;
 			if (Tracking4_Switch) // 如果打开四路循迹
@@ -307,11 +312,9 @@ int main(void)
 			if (Tracking8_Switch) {
 				// 如果打开八路循迹
 				No_Mcu_Ganv_Sensor_Task_With_tick(&track_sensor); // 传感器任务处理
-				LineWalking8_Track(track_sensor.Digtal, 200);
+				LineWalking8_Track(track_sensor.Digtal, 150);
 			}
 		}
-
-
 	}
     /* USER CODE END WHILE */
 

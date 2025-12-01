@@ -1,9 +1,9 @@
 #include "Ganv_Grayscale_Sensor_Config.h"
 
 // 黑场校准值
-unsigned short ganv_white[8] = {3280, 3287, 3299, 3280, 3209, 3260, 3307, 3300};
+unsigned short ganv_white[8] = {3141,3155,3149,3146,3088,3118,3170,3160};
 // 白场校准值
-unsigned short ganv_black[8] = {1506, 1838, 1698, 1001, 1112, 1024, 1653, 2028};
+unsigned short ganv_black[8] = {50,50,64,54,62,57,65,66};
 
 /* 函数功能：采集8个通道的模拟值并进行均值滤波
    参数说明：result - 存储8个通道处理结果的数组 */

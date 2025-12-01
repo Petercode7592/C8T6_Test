@@ -10,7 +10,7 @@ static const int8_t sensor_weight[8] = {35, 25, 15, 5, -5, -15, -25, -35};
 static PID_Controller line_pid;
 static int16_t last_valid_error = 0; // 用于掉线方向记忆
 static int16_t last_digital = -1;     // 上一帧有效数据（用于掉线恢复）
-#define RotSpeed 150 // 旋转速度
+#define RotSpeed 120 // 旋转速度
 
 /**
  * @brief 初始化PID控制器（用于循迹）
@@ -79,5 +79,10 @@ void LineWalking8_Track(uint8_t track_digital, int16_t speed) {
     // OLED_ShowSignedNum(1,1, error, 4, 8); // 显示误差值
     // OLED_ShowSignedNum(1,4, correction, 4, 8); // 显示修正值
     // 根据误差计算速度修正
-    Motion_SetLR_Speed(speed - correction, speed + correction);
+	int16_t left_speed = speed - correction;
+	int16_t right_speed = speed + correction;
+	// 防止速度为负 打滑
+	if (left_speed < 0) left_speed = 0;
+	if (right_speed < 0) right_speed = 0;
+    Motion_SetLR_Speed(left_speed, right_speed);
 }

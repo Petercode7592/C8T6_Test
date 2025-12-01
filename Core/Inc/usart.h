@@ -41,9 +41,9 @@ extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef null_uart; // 空闲串口配置，避免编译错误
 
 // 连接到电脑 Debug
-// #define PCUART_Cfg null_uart          // PC 通信串口配置
-#define Bluetooth_Cfg huart1          // 蓝牙通信串口配置
-#define PCUMUART_Cfg huart2             // MCU-MCU 通信串口配置
+// #define PCUART_Cfg null_uart         // PC 通信串口配置
+#define Bluetooth_Cfg huart1			// 蓝牙通信串口配置
+#define PCUMUART_Cfg huart2				// MCU-MCU 通信串口配置
 /* USER CODE END Private defines */
 
 void MX_USART1_UART_Init(void);

@@ -157,7 +157,7 @@ HAL_StatusTypeDef MDrv_UploadData(uint8_t mall_en,  uint8_t mtep_en, uint8_t msp
     // 发送上传数据指令
     // 假设mall, mtep, mspd是需要上传的数据 相应变量赋值1代表回传该部分的数据
     char cmd[30];
-    snprintf(cmd, sizeof(cmd), "$upload:%d,%d,%d#\r\n", mall_en, mtep_en, mspd_en);
+    snprintf(cmd, sizeof(cmd), "$upload:0,0,1#\r\n");
     return HAL_UART_Transmit(&PCUMUART_Cfg, (uint8_t *) cmd, strlen(cmd), Uart_MaxWait);
 }
 
@@ -254,6 +254,7 @@ void MDrv_RequestVol(void) {
       */
 void MDrv_Init(int mode) {
     //  0.05,0.2,0.95 优秀值
+	// $MPID:1.5,0.15,1.8#
     // 1.5 0.15 1.8
     if (mode == 0) {
         MDrv_SetMtype(2);       // 设置为310电机
