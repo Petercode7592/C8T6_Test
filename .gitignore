@@ -1,0 +1,73 @@
+# Build directories (CMake / CLion / STM32CubeIDE / Keil)
+/build/
+/cmake-build-*/
+Debug/
+Release/
+RelWithDebInfo/
+MinSizeRel/
+Objects/
+Listings/
+/MDK-ARM/C8T6_Test/
+
+# CMake and Ninja generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+compile_commands.json
+build.ninja
+rules.ninja
+.ninja_deps
+.ninja_log
+CMakeUserPresets.json
+
+# Compiler output and generated firmware
+*.o
+*.obj
+*.d
+*.elf
+*.axf
+*.hex
+*.bin
+*.map
+*.lst
+*.su
+*.crf
+*.lnp
+*.htm
+*.build_log.htm
+
+# IDE local settings and caches
+.idea/
+.cache/
+.metadata/
+*.uvguix.*
+*.uvopt
+*.uvoptx
+*.uvgui.*
+*.uvproj.bak
+*.uvprojx.bak
+*.uvopt.bak
+*.uvoptx.bak
+*.code-workspace
+
+# Temporary files and operating-system metadata
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Existing local backup archives and saved command output
+/Drivers/Peter/Display/Display.zip
+/Drivers/Peter/Display/OLED.zip
+/et --hard 1234567
+
+# Keep source, vendor libraries, linker scripts, .ioc, CMakePresets.json,
+# toolchain files, .clang-format, .uvprojx and CubeIDE project files tracked.
